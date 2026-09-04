@@ -11,17 +11,18 @@
             "duration": "2020 - Present"
         }
     ],
-    "skills": [
-        "Python",
-        "JavaScript",
-        "React",
-        "SQL"
-    ],
     "education": [
         {
             "degree": "Bachelor of Science in Computer Science",
             "school": "XYZ University",
             "year": "2020"
         }
+    ],
+    "skills": [
+        "Python",
+        "JavaScript",
+        "React",
+        "SQL"
     ]
+    
 }
