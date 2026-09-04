@@ -1,0 +1,26 @@
+[project]
+name = "client"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "juan1417", email = "juan.machado210@pascualbravo.edu.co" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "argon2-cffi>=25.1.0",
+    "dotenv>=0.9.9",
+    "fastapi[standard]>=0.141.1",
+    "prefect>=3.8.5",
+    "psycopg2>=2.9.12",
+    "python-docx>=1.2.0",
+    "reportlab>=5.0.1",
+    "sqlmodel>=0.0.42",
+]
+
+[project.scripts]
+client = "client:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"

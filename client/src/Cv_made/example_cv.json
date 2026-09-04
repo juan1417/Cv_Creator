@@ -1,0 +1,27 @@
+{
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "phone": "123-456-7890",
+    "address": "123 Main St, City, State 12345",
+    "about": "A passionate software engineer with experience in developing web applications.",
+    "experience": [
+        {
+            "title": "Software Engineer",
+            "company": "ABC Corp",
+            "duration": "2020 - Present"
+        }
+    ],
+    "skills": [
+        "Python",
+        "JavaScript",
+        "React",
+        "SQL"
+    ],
+    "education": [
+        {
+            "degree": "Bachelor of Science in Computer Science",
+            "school": "XYZ University",
+            "year": "2020"
+        }
+    ]
+}
