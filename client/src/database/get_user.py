@@ -1,3 +1,5 @@
+from models.cv import CV
+
 from .DB import get_engine, validate_database_connection
 from sqlmodel import Session, select
 from ..models.user import User
@@ -39,3 +41,15 @@ def get_user_by_email(email: str) -> User:
         user = session.exec(statement).first()
         return user
 
+def get_cvUser_by_email(email: str):
+    if not validate_database_connection():
+        return None
+    engine = get_engine()
+    with Session(engine) as session:
+        statement = select(User).where(User.email == email)
+        user = session.exec(statement).first()
+        statement = session.select(CV).where(CV.idUser == user.id)
+        cv = session.exec(statement).first() 
+        if cv is None:
+            return None
+        return cv
