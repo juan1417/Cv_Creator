@@ -1,10 +1,10 @@
-from sqlmodel import Model, Field
+from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
 from uuid import UUID, uuid4
 
 
-class LogEntry(Model, table=True):
+class LogEntry(SQLModel, table=True):
     __tablename__ = "log_entries"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)

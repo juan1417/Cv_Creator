@@ -2,8 +2,9 @@ from models.cv import CV
 
 from .DB import get_engine, validate_database_connection
 from sqlmodel import Session, select
-from ..models.user import User
-from argon2 import PasswordHasher, VerifyMismatchError
+from models.user import User
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 
 DUMMY_HASH="$argon2id$v=19$m=65536,t=3,p=4$Wm9uZQ$Wm9uZQ"  # Dummy hash for timing attack prevention
 

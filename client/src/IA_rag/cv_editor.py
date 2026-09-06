@@ -3,11 +3,11 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
-from ..database.DB import get_engine
-from ..models.cv import CV
-from ..models.experience import Experience
-from ..models.skill import Skills
-from ..models.education import Education
+from database.DB import get_engine
+from models.cv import CV
+from models.experience import Experience
+from models.skill import Skills
+from models.education import Education
 
 
 def _get_user_cv(user_id: UUID, session: Session) -> CV | None:

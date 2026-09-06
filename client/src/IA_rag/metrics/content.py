@@ -1,6 +1,6 @@
 import re
 
-from ...models.cv_analysis import ContentMetrics, MetricDetail
+from models.cv_analysis import ContentMetrics, MetricDetail
 
 
 def _status(score: float) -> str:

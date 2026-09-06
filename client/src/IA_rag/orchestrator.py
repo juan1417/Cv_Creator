@@ -1,7 +1,7 @@
 from uuid import UUID
 from sqlmodel import Session
 
-from ..database.DB import get_engine
+from database.DB import get_engine
 from .retriever import get_user_cv, format_cv_as_context
 from .generator import generate_response
 from .action_parser import extract_json_action, strip_json_from_response
@@ -13,6 +13,17 @@ from .chat_handler import (
     update_session_metadata,
     build_messages,
 )
+
+
+def _is_cv_empty(cv_data: dict) -> bool:
+    """Detecta si el CV está vacío (recién creado o sin datos)."""
+    cv = cv_data.get("cv", {})
+    has_name = bool(cv.get("name", "").strip())
+    has_email = bool(cv.get("email", "").strip())
+    has_experiences = len(cv_data.get("experience", [])) > 0
+    has_skills = len(cv_data.get("skills", [])) > 0
+    has_education = len(cv_data.get("education", [])) > 0
+    return not (has_name or has_email or has_experiences or has_skills or has_education)
 
 
 def chat(
@@ -29,11 +40,12 @@ def chat(
         if not cv_data:
             raise ValueError("Completa tu CV primero para usar el asistente")
 
-        cv_context = format_cv_as_context(cv_data)
+        cv_empty = _is_cv_empty(cv_data)
+        cv_context = format_cv_as_context(user_id)
 
         history = get_chat_history(db_session, chat_session)
 
-        llm_messages = build_messages(cv_context, history, user_message)
+        llm_messages = build_messages(cv_context, history, user_message, cv_empty)
         response_text = generate_response(llm_messages)
 
         action = extract_json_action(response_text)
@@ -60,9 +72,13 @@ def chat(
 
         db_session.commit()
 
+        # Capture values before session closes
+        session_id_val = chat_session.id
+        target_job_val = chat_session.target_job
+
     return {
-        "session_id": str(chat_session.id),
+        "session_id": str(session_id_val),
         "response": clean_response,
-        "target_job": chat_session.target_job,
+        "target_job": target_job_val,
         "action_result": action_result,
     }

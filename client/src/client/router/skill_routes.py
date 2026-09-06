@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from uuid import UUID
 from sqlmodel import Session, select
 
-from ...database.DB import get_engine
-from ...models.skill import Skills
+from database.DB import get_engine
+from models.skill import Skills
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 

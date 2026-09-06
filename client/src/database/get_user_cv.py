@@ -1,10 +1,10 @@
 from uuid import UUID
 from sqlmodel import Session, select
 from .DB import get_engine
-from ..models.cv import CV
-from ..models.experience import Experience
-from ..models.skill import Skills
-from ..models.education import Education
+from models.cv import CV
+from models.experience import Experience
+from models.skill import Skills
+from models.education import Education
 
 
 def get_user_cv_data(user_id: UUID) -> dict | None:

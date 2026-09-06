@@ -3,7 +3,7 @@ from typing import Optional
 from sqlmodel import Session, select, func
 
 from .DB import get_engine
-from ..models.log import LogEntry
+from models.log import LogEntry
 
 
 def get_logs(

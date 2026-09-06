@@ -3,12 +3,13 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
+import asyncio
 
-from ...database.DB import get_engine
-from ...models.chat import ChatSession, ChatMessage
-from ...IA_rag.orchestrator import chat as rag_chat
-from ...IA_rag.cv_analyzer import analyze_cv
-from ...IA_rag.cv_editor import (
+from database.DB import get_engine
+from models.chat import ChatSession, ChatMessage
+from IA_rag.orchestrator import chat as rag_chat
+from IA_rag.cv_analyzer import analyze_cv
+from IA_rag.cv_editor import (
     update_cv_field,
     add_experience,
     update_experience,
@@ -18,13 +19,13 @@ from ...IA_rag.cv_editor import (
     add_education,
     delete_education,
 )
-from ...models.cv_analysis import CVAnalysis
-from ...models.cv import CV
+from models.cv_analysis import CVAnalysis
+from models.cv import CV
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
-# ─── Request / Response Models ────────────────────────────────────────
+# --- Request / Response Models ---
 
 class CreateSessionRequest(BaseModel):
     user_id: UUID
@@ -112,7 +113,7 @@ class EditResultResponse(BaseModel):
     new_id: UUID | None = None
 
 
-# ─── Chat Endpoints ──────────────────────────────────────────────────
+# --- Chat Endpoints ---
 
 @router.post("/sessions", response_model=SessionResponse)
 async def create_session(req: CreateSessionRequest):
@@ -137,7 +138,8 @@ async def create_session(req: CreateSessionRequest):
 @router.post("/sessions/{session_id}/messages", response_model=ChatResponse)
 async def send_message(session_id: UUID, req: SendMessageRequest):
     try:
-        result = rag_chat(
+        result = await asyncio.to_thread(
+            rag_chat,
             user_id=req.user_id,
             user_message=req.content,
             session_id=session_id,
@@ -145,13 +147,13 @@ async def send_message(session_id: UUID, req: SendMessageRequest):
         return ChatResponse(**result)
     except ValueError as e:
         msg = str(e)
-        if "no encontrada" in msg:
-            raise HTTPException(status_code=404, detail=msg)
-        if "CV primero" in msg:
-            raise HTTPException(status_code=404, detail=msg)
+        if "no encontrada" in msg or "CV" in msg:
+            raise HTTPException(status_code=400, detail=msg)
         raise HTTPException(status_code=400, detail=msg)
     except Exception as e:
-        raise HTTPException(status_code=502, detail="Servicio de IA no disponible")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=502, detail=f"Error del asistente: {str(e)}")
 
 
 @router.get("/sessions", response_model=SessionListResponse)
@@ -190,7 +192,7 @@ async def get_messages(session_id: UUID, user_id: UUID):
         ).first()
 
         if not chat_session:
-            raise HTTPException(status_code=404, detail="Sesión no encontrada")
+            raise HTTPException(status_code=404, detail="Sesion no encontrada")
 
         messages = list(session.exec(
             select(ChatMessage)
@@ -224,7 +226,7 @@ async def delete_session(session_id: UUID, user_id: UUID):
         ).first()
 
         if not chat_session:
-            raise HTTPException(status_code=404, detail="Sesión no encontrada")
+            raise HTTPException(status_code=404, detail="Sesion no encontrada")
 
         messages = session.exec(
             select(ChatMessage).where(ChatMessage.session_id == session_id)
@@ -235,7 +237,7 @@ async def delete_session(session_id: UUID, user_id: UUID):
         session.delete(chat_session)
         session.commit()
 
-        return {"message": "Sesión eliminada correctamente"}
+        return {"message": "Sesion eliminada correctamente"}
 
 
 @router.get("/cv-analysis", response_model=CVAnalysis)
@@ -249,7 +251,7 @@ async def cv_analysis(user_id: UUID):
         raise HTTPException(status_code=500, detail=f"Error al analizar CV: {str(e)}")
 
 
-# ─── CV Edit Endpoints ───────────────────────────────────────────────
+# --- CV Edit Endpoints ---
 
 def _verify_cv_ownership(user_id: UUID) -> None:
     engine = get_engine()
@@ -267,7 +269,7 @@ async def edit_cv_field(req: UpdateCVFieldRequest):
     if req.field not in allowed_fields:
         raise HTTPException(
             status_code=400,
-            detail=f"Campo no válido. Campos permitidos: {', '.join(sorted(allowed_fields))}",
+            detail=f"Campo no valido. Campos permitidos: {', '.join(sorted(allowed_fields))}",
         )
 
     success = update_cv_field(req.user_id, req.field, req.value)
@@ -387,11 +389,11 @@ async def create_education(req: AddEducationRequest):
     }
     edu_id = add_education(req.user_id, data)
     if not edu_id:
-        raise HTTPException(status_code=500, detail="Error al crear la formación")
+        raise HTTPException(status_code=500, detail="Error al crear la formacion")
 
     return EditResultResponse(
         success=True,
-        message="Formación creada correctamente",
+        message="Formacion creada correctamente",
         new_id=edu_id,
     )
 
@@ -402,9 +404,9 @@ async def remove_education(education_id: UUID, user_id: UUID):
 
     success = delete_education(user_id, education_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Formación no encontrada")
+        raise HTTPException(status_code=404, detail="Formacion no encontrada")
 
     return EditResultResponse(
         success=True,
-        message="Formación eliminada correctamente",
+        message="Formacion eliminada correctamente",
     )

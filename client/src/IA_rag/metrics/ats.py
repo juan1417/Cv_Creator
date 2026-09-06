@@ -1,4 +1,4 @@
-from ...models.cv_analysis import ATSMetrics, MetricDetail
+from models.cv_analysis import ATSMetrics, MetricDetail
 
 
 def _status(score: float) -> str:

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from ...models.cv_analysis import StructureMetrics, MetricDetail
+from models.cv_analysis import StructureMetrics, MetricDetail
 
 
 def _status(score: float) -> str:

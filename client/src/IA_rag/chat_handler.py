@@ -2,8 +2,10 @@ from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
 
-from ..database.DB import get_engine
-from ..models.chat import ChatSession, ChatMessage
+from database.DB import get_engine
+from models.chat import ChatSession, ChatMessage
+from models.user import User  # noqa: F401 - needed for FK resolution
+from models.cv import CV  # noqa: F401 - needed for FK resolution
 from .prompts import SYSTEM_PROMPT
 
 MAX_HISTORY_MESSAGES = 10
@@ -107,9 +109,13 @@ def build_messages(
     cv_context: str,
     history: list[ChatMessage],
     user_message: str,
+    cv_empty: bool = False,
 ) -> list[dict]:
+    system_content = f"{SYSTEM_PROMPT}\n\n## CV del Usuario\n{cv_context}"
+    if cv_empty:
+        system_content += "\n\n## IMPORTANTE: El CV del usuario ESTÁ VACÍO. Debes iniciar el flujo de creación de CV desde cero siguiendo las instrucciones de la sección 'CREAR CV DESDE CERO'."
     messages = [
-        {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n## CV del Usuario\n{cv_context}"}
+        {"role": "system", "content": system_content}
     ]
     for msg in history:
         messages.append({"role": msg.role, "content": msg.content})

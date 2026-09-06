@@ -1,4 +1,4 @@
-from ...models.cv_analysis import CompletenessMetrics, MetricDetail
+from models.cv_analysis import CompletenessMetrics, MetricDetail
 
 
 def _status(score: float) -> str:

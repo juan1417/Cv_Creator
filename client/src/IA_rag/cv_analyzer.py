@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from ..database.get_user_cv import get_user_cv_data
-from ..models.cv_analysis import (
+from database.get_user_cv import get_user_cv_data
+from models.cv_analysis import (
     CVAnalysis,
     CompletenessMetrics,
     ContentMetrics,

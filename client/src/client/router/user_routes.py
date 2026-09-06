@@ -4,8 +4,8 @@ from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
 
-from ...database.DB import get_engine
-from ...models.user import User
+from database.DB import get_engine
+from models.user import User
 from argon2 import PasswordHasher
 
 router = APIRouter(prefix="/api/users", tags=["users"])

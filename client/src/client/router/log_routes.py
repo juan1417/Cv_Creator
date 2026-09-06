@@ -3,8 +3,8 @@ from fastapi.responses import PlainTextResponse
 from datetime import datetime
 from pathlib import Path
 
-from ...database.get_logs import get_logs, get_logs_by_user, get_log_stats
-from ...models.log import LogEntry
+from database.get_logs import get_logs, get_logs_by_user, get_log_stats
+from models.log import LogEntry
 
 router = APIRouter(prefix="/api/logs", tags=["logs"])
 

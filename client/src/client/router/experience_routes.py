@@ -4,8 +4,8 @@ from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
 
-from ...database.DB import get_engine
-from ...models.experience import Experience
+from database.DB import get_engine
+from models.experience import Experience
 
 router = APIRouter(prefix="/api/experiences", tags=["experiences"])
 

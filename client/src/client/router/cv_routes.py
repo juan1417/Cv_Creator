@@ -4,12 +4,12 @@ from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
 
-from ...database.DB import get_engine
-from ...models.user import User
-from ...models.cv import CV
-from ...models.experience import Experience
-from ...models.skill import Skills
-from ...models.education import Education
+from database.DB import get_engine
+from models.user import User
+from models.cv import CV
+from models.experience import Experience
+from models.skill import Skills
+from models.education import Education
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
@@ -131,7 +131,23 @@ async def get_full_cv(user_id: UUID):
     with Session(engine) as session:
         cv = session.exec(select(CV).where(CV.idUser == user_id)).first()
         if not cv:
-            raise HTTPException(status_code=404, detail="CV no encontrado para este usuario")
+            # Auto-create CV with empty fields
+            user = session.get(User, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            cv = CV(
+                name=user.username or "",
+                email=user.email or "",
+                phone="",
+                address="",
+                about="",
+                porfolio="",
+                linkedin=None,
+                idUser=user_id,
+            )
+            session.add(cv)
+            session.commit()
+            session.refresh(cv)
 
         experiences = list(session.exec(
             select(Experience).where(Experience.idUser == user_id).order_by(Experience.start_date.desc())
