@@ -110,9 +110,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center h-16 px-4 border-b border-zinc-800">
-            <span className="text-xl font-bold text-white whitespace-nowrap overflow-hidden">
-              {isOpen ? "CV Creator" : "CV"}
-            </span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white shadow-sm">
+                CV
+              </span>
+              <span className="text-lg font-bold text-white whitespace-nowrap overflow-hidden">
+                {isOpen ? "Creator" : ""}
+              </span>
+            </div>
           </div>
 
           <nav className="flex-1 py-4 space-y-1 px-2">
@@ -127,7 +132,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                     transition-colors duration-150
                     ${isActive
-                      ? "bg-blue-600 text-white"
+                      ? "bg-blue-600/15 text-blue-400"
                       : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
                     }
                   `}

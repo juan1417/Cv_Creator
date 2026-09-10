@@ -1,0 +1,445 @@
+2026-09-06 16:40:09,056 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2026-09-06 16:40:09,059 INFO sqlalchemy.engine.Engine [raw sql] {}
+2026-09-06 16:40:09,193 INFO sqlalchemy.engine.Engine select current_schema()
+2026-09-06 16:40:09,194 INFO sqlalchemy.engine.Engine [raw sql] {}
+2026-09-06 16:40:09,327 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2026-09-06 16:40:09,328 INFO sqlalchemy.engine.Engine [raw sql] {}
+2026-09-06 16:40:09,462 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:40:09,469 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:09,471 INFO sqlalchemy.engine.Engine [generated in 0.00170s] {'table_name': 'log_entries', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:09,607 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:09,610 INFO sqlalchemy.engine.Engine [cached since 0.1397s ago] {'table_name': 'chat_session', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:09,679 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:09,680 INFO sqlalchemy.engine.Engine [cached since 0.2106s ago] {'table_name': 'chat_message', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:09,749 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:09,750 INFO sqlalchemy.engine.Engine [cached since 0.2797s ago] {'table_name': 'cv', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:09,818 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:09,819 INFO sqlalchemy.engine.Engine [cached since 0.3485s ago] {'table_name': 'experience', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:09,889 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:09,890 INFO sqlalchemy.engine.Engine [cached since 0.4201s ago] {'table_name': 'skills', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:09,958 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:09,959 INFO sqlalchemy.engine.Engine [cached since 0.4888s ago] {'table_name': 'education', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:10,027 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:10,028 INFO sqlalchemy.engine.Engine [cached since 0.5578s ago] {'table_name': 'user', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:10,097 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2026-09-06 16:40:10,098 INFO sqlalchemy.engine.Engine [cached since 0.628s ago] {'table_name': 'skillcatalog', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2026-09-06 16:40:10,168 INFO sqlalchemy.engine.Engine COMMIT
+Tablas creadas/verificadas correctamente
+INFO:     127.0.0.1:49501 - "OPTIONS /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61487 - "OPTIONS /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:45:55,021 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:45:55,026 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:45:55,026 INFO sqlalchemy.engine.Engine [generated in 0.00042s] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,163 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:45:55,165 INFO sqlalchemy.engine.Engine [generated in 0.00230s] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,234 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:45:55,234 INFO sqlalchemy.engine.Engine [generated in 0.00046s] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,304 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:45:55,304 INFO sqlalchemy.engine.Engine [generated in 0.00047s] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,371 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-06 16:45:55,438 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:45:55,439 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:45:55,439 INFO sqlalchemy.engine.Engine [cached since 0.4129s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,573 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:45:55,576 INFO sqlalchemy.engine.Engine [cached since 0.4135s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,644 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:45:55,644 INFO sqlalchemy.engine.Engine [cached since 0.4104s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,713 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:45:55,713 INFO sqlalchemy.engine.Engine [cached since 0.4097s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:45:55,780 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49501 - "GET /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:46:10,689 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:46:10,690 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:10,690 INFO sqlalchemy.engine.Engine [cached since 15.66s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:10,824 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:46:10,826 INFO sqlalchemy.engine.Engine [cached since 15.66s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:10,895 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:10,895 INFO sqlalchemy.engine.Engine [cached since 15.66s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:10,964 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:46:10,964 INFO sqlalchemy.engine.Engine [cached since 15.66s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:11,030 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-06 16:46:11,098 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:46:11,099 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:11,099 INFO sqlalchemy.engine.Engine [cached since 16.07s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:11,233 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:46:11,236 INFO sqlalchemy.engine.Engine [cached since 16.07s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:11,304 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:11,304 INFO sqlalchemy.engine.Engine [cached since 16.07s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:11,372 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:46:11,372 INFO sqlalchemy.engine.Engine [cached since 16.07s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:11,439 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49501 - "GET /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53149 - "OPTIONS /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49788 - "OPTIONS /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:46:27,080 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:46:27,081 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:27,081 INFO sqlalchemy.engine.Engine [cached since 32.05s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,215 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:46:27,216 INFO sqlalchemy.engine.Engine [cached since 32.05s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,283 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:27,285 INFO sqlalchemy.engine.Engine [cached since 32.05s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,353 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:46:27,353 INFO sqlalchemy.engine.Engine [cached since 32.05s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,421 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49501 - "GET /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:46:27,491 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:46:27,491 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:27,492 INFO sqlalchemy.engine.Engine [cached since 32.47s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,625 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:46:27,628 INFO sqlalchemy.engine.Engine [cached since 32.47s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,696 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:46:27,697 INFO sqlalchemy.engine.Engine [cached since 32.46s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,765 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:46:27,766 INFO sqlalchemy.engine.Engine [cached since 32.46s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:46:27,834 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49501 - "GET /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:48:31,102 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:31,105 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:31,105 INFO sqlalchemy.engine.Engine [cached since 156.1s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,248 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:48:31,250 INFO sqlalchemy.engine.Engine [cached since 156.1s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,318 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:31,318 INFO sqlalchemy.engine.Engine [cached since 156.1s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,387 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:48:31,387 INFO sqlalchemy.engine.Engine [cached since 156.1s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,454 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62243 - "GET /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:48:31,524 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:31,524 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:31,524 INFO sqlalchemy.engine.Engine [cached since 156.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,658 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:48:31,660 INFO sqlalchemy.engine.Engine [cached since 156.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,730 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:31,730 INFO sqlalchemy.engine.Engine [cached since 156.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,798 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:48:31,798 INFO sqlalchemy.engine.Engine [cached since 156.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:31,866 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62243 - "GET /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64824 - "OPTIONS /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64824 - "OPTIONS /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:48:37,383 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:37,385 INFO sqlalchemy.engine.Engine SELECT chat_session.id, chat_session.title, chat_session.target_job, chat_session."at_Created", chat_session."at_Updated", chat_session."idUser" 
+FROM chat_session 
+WHERE chat_session."idUser" = %(idUser_1)s::UUID ORDER BY chat_session."at_Updated" DESC
+2026-09-06 16:48:37,385 INFO sqlalchemy.engine.Engine [generated in 0.00049s] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:37,519 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64824 - "GET /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:48:37,590 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:37,590 INFO sqlalchemy.engine.Engine SELECT chat_session.id, chat_session.title, chat_session.target_job, chat_session."at_Created", chat_session."at_Updated", chat_session."idUser" 
+FROM chat_session 
+WHERE chat_session."idUser" = %(idUser_1)s::UUID ORDER BY chat_session."at_Updated" DESC
+2026-09-06 16:48:37,591 INFO sqlalchemy.engine.Engine [cached since 0.2057s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:37,725 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64824 - "GET /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:48:39,598 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:39,598 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:39,599 INFO sqlalchemy.engine.Engine [cached since 164.6s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:39,733 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:48:39,735 INFO sqlalchemy.engine.Engine [cached since 164.6s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:39,803 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:39,804 INFO sqlalchemy.engine.Engine [cached since 164.6s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:39,872 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:48:39,872 INFO sqlalchemy.engine.Engine [cached since 164.6s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:39,939 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-06 16:48:40,009 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:40,010 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:40,011 INFO sqlalchemy.engine.Engine [cached since 165s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:40,145 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:48:40,145 INFO sqlalchemy.engine.Engine [cached since 165s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:40,213 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:40,213 INFO sqlalchemy.engine.Engine [cached since 165s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:40,282 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:48:40,282 INFO sqlalchemy.engine.Engine [cached since 165s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:40,350 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64824 - "GET /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 16:48:56,497 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:56,498 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:56,498 INFO sqlalchemy.engine.Engine [cached since 181.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:56,632 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:48:56,634 INFO sqlalchemy.engine.Engine [cached since 181.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:56,702 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:56,702 INFO sqlalchemy.engine.Engine [cached since 181.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:56,771 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:48:56,771 INFO sqlalchemy.engine.Engine [cached since 181.5s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:56,839 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-06 16:48:56,907 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 16:48:56,907 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:56,907 INFO sqlalchemy.engine.Engine [cached since 181.9s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:57,041 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 16:48:57,044 INFO sqlalchemy.engine.Engine [cached since 181.9s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:57,112 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 16:48:57,112 INFO sqlalchemy.engine.Engine [cached since 181.9s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:57,180 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 16:48:57,180 INFO sqlalchemy.engine.Engine [cached since 181.9s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 16:48:57,247 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64824 - "GET /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58333 - "OPTIONS /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61559 - "OPTIONS /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54263 - "OPTIONS /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51046 - "OPTIONS /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 20:43:40,255 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:43:40,257 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:43:40,257 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+INFO:     127.0.0.1:58333 - "GET /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 500 Internal Server Error
+2026-09-06 20:43:41,408 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:43:41,409 INFO sqlalchemy.engine.Engine SELECT chat_session.id, chat_session.title, chat_session.target_job, chat_session."at_Created", chat_session."at_Updated", chat_session."idUser" 
+FROM chat_session 
+WHERE chat_session."idUser" = %(idUser_1)s::UUID ORDER BY chat_session."at_Updated" DESC
+2026-09-06 20:43:41,409 INFO sqlalchemy.engine.Engine [cached since 1.411e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:41,586 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61559 - "GET /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 20:43:41,656 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:43:41,656 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:43:41,656 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:41,797 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 20:43:41,800 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:41,872 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:43:41,873 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:41,951 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 20:43:41,952 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,023 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:54263 - "GET /api/cv/a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 20:43:42,092 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:43:42,092 INFO sqlalchemy.engine.Engine SELECT chat_session.id, chat_session.title, chat_session.target_job, chat_session."at_Created", chat_session."at_Updated", chat_session."idUser" 
+FROM chat_session 
+WHERE chat_session."idUser" = %(idUser_1)s::UUID ORDER BY chat_session."at_Updated" DESC
+2026-09-06 20:43:42,093 INFO sqlalchemy.engine.Engine [cached since 1.411e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,227 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61559 - "GET /api/chat/sessions?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51046 - "OPTIONS /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65342 - "OPTIONS /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 20:43:42,298 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:43:42,299 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:43:42,299 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,434 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 20:43:42,436 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,504 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:43:42,504 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,572 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 20:43:42,572 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,641 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-06 20:43:42,708 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:43:42,708 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:43:42,709 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,843 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 20:43:42,845 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,913 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:43:42,913 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:42,981 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 20:43:42,981 INFO sqlalchemy.engine.Engine [cached since 1.427e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:43:43,050 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61559 - "GET /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 20:44:09,422 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:44:09,422 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:44:09,422 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:09,557 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 20:44:09,559 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:09,627 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:44:09,628 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:09,705 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 20:44:09,706 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:09,773 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-06 20:44:09,841 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:44:09,842 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:44:09,843 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:09,976 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 20:44:09,978 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:10,046 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:44:10,046 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:10,114 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 20:44:10,114 INFO sqlalchemy.engine.Engine [cached since 1.43e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:44:10,183 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:65342 - "GET /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK
+2026-09-06 20:46:04,594 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:46:04,595 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:46:04,595 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:04,730 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 20:46:04,733 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:04,800 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:46:04,801 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:04,869 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 20:46:04,869 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:04,937 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-09-06 20:46:05,004 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-09-06 20:46:05,005 INFO sqlalchemy.engine.Engine SELECT cv.id, cv.name, cv.email, cv.phone, cv.address, cv.about, cv.porfolio, cv.linkedin, cv."at_Created", cv."at_Updated", cv."idUser" 
+FROM cv 
+WHERE cv."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:46:05,005 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:05,139 INFO sqlalchemy.engine.Engine SELECT experience.id, experience.title, experience.company, experience.start_date, experience.end_date, experience.description, experience."at_Created", experience."at_Updated", experience."idUser" 
+FROM experience 
+WHERE experience."idUser" = %(idUser_1)s::UUID ORDER BY experience.start_date DESC
+2026-09-06 20:46:05,140 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:05,207 INFO sqlalchemy.engine.Engine SELECT skills.id, skills.name, skills.level, skills.type, skills."at_Created", skills."at_Updated", skills."idUser" 
+FROM skills 
+WHERE skills."idUser" = %(idUser_1)s::UUID
+2026-09-06 20:46:05,208 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:05,276 INFO sqlalchemy.engine.Engine SELECT education.id, education.degree, education.institution, education.start_date, education.end_date, education.description, education."at_Created", education."at_Updated", education."idUser" 
+FROM education 
+WHERE education."idUser" = %(idUser_1)s::UUID ORDER BY education.start_date DESC
+2026-09-06 20:46:05,276 INFO sqlalchemy.engine.Engine [cached since 1.441e+04s ago] {'idUser_1': UUID('a99de9b3-0424-4343-9b38-11ef7d4ac695')}
+2026-09-06 20:46:05,344 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58536 - "GET /api/chat/cv-analysis?user_id=a99de9b3-0424-4343-9b38-11ef7d4ac695 HTTP/1.1" 200 OK

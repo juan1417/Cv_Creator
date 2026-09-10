@@ -6,6 +6,18 @@ import { useAuth } from "@/app/lib/auth";
 import { getFullCV } from "@/app/lib/api";
 import type { FullCV } from "@/app/lib/types";
 
+// ─── Template constants (Arial, #404040, matching plantilla.docx) ───────────
+const FONT = "'Arial', 'Helvetica Neue', Helvetica, sans-serif";
+const COLOR = "#404040";
+const SIZE = {
+  name: "26px",
+  contact: "11px",
+  body: "11.5px",
+  heading: "12px",
+  section: "13px",
+  date: "11px",
+};
+
 export default function CVPreviewPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -46,14 +58,31 @@ export default function CVPreviewPage() {
   const experiences = cv.experiences || [];
   const education = cv.education || [];
   const skills = cv.skills || [];
+  const achievements = cv.achievements || [];
+  const programs = cv.programs || [];
+  const languages = cv.languages || [];
 
-  const contactParts: string[] = [];
-  if (data.address) contactParts.push(data.address);
-  if (data.linkedin) contactParts.push(data.linkedin);
-  if (data.phone) {
-    contactParts.push(data.phone.startsWith("+") ? data.phone : `+${data.phone}`);
-  }
-  if (data.email) contactParts.push(data.email);
+  const softSkills = skills.filter((s) => s.type === "soft");
+  const techSkills = skills.filter((s) => s.type !== "soft");
+
+  const hasData =
+    data.name ||
+    data.about ||
+    experiences.length ||
+    education.length ||
+    skills.length ||
+    achievements.length ||
+    programs.length ||
+    languages.length;
+
+  // Contact parts: address, linkedin, porfolio, phone, email — bullet separated
+  const contactParts = [
+    data.address,
+    data.linkedin,
+    data.porfolio,
+    data.phone,
+    data.email,
+  ].filter(Boolean);
 
   return (
     <div className="max-w-[800px] mx-auto">
@@ -76,145 +105,13 @@ export default function CVPreviewPage() {
         </button>
       </div>
 
-      {/* CV Document — Harvard Template Style */}
+      {/* CV Document — New template: Arial, #404040, paragraph-based */}
       <div className="bg-white shadow-xl rounded-lg overflow-hidden print:shadow-none print:rounded-none">
-        <div className="px-10 py-8" style={{ fontFamily: "'STIX Two Text', 'Georgia', serif" }}>
+        <div className="px-10 py-8">
 
-          {/* ── NAME ──────────────────────────────────────────── */}
-          <h1
-            className="text-center font-bold tracking-wide"
-            style={{ fontSize: "28px", color: "#1A1A2E" }}
-          >
-            {data.name || "Tu Nombre"}
-          </h1>
-
-          {/* ── CONTACT ───────────────────────────────────────── */}
-          <p
-            className="text-center mt-2"
-            style={{ fontSize: "11px", color: "#444" }}
-          >
-            {contactParts.join(" \u2022 ")}
-          </p>
-
-          {/* ── ABOUT ─────────────────────────────────────────── */}
-          {data.about && (
-            <p className="mt-6" style={{ fontSize: "11px", color: "#333", lineHeight: "1.6" }}>
-              {data.about}
-            </p>
-          )}
-
-          {/* ── EXPERIENCIA PROFESIONAL ───────────────────────── */}
-          {experiences.length > 0 && (
-            <>
-              <h2
-                className="text-center mt-8 mb-4 font-bold uppercase tracking-widest"
-                style={{ fontSize: "13px", color: "#1A1A2E", letterSpacing: "2px" }}
-              >
-                Experiencia Profesional
-              </h2>
-              {experiences.map((exp, i) => (
-                <div key={i} className="mb-4">
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <span className="font-bold" style={{ fontSize: "11px", color: "#1A1A2E" }}>
-                        {exp.company}
-                      </span>
-                      {exp.title && (
-                        <span className="ml-2" style={{ fontSize: "11px", color: "#1A1A2E" }}>
-                          {exp.title}
-                        </span>
-                      )}
-                    </div>
-                    <span style={{ fontSize: "10px", color: "#666" }}>
-                      {exp.start_date && new Date(exp.start_date).getFullYear()}
-                      {exp.start_date && (exp.end_date ? ` - ${new Date(exp.end_date).getFullYear()}` : " - Presente")}
-                    </span>
-                  </div>
-                  {exp.description && (
-                    <p className="mt-1" style={{ fontSize: "11px", color: "#333", lineHeight: "1.6" }}>
-                      {exp.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ── EDUCACIÓN ─────────────────────────────────────── */}
-          {education.length > 0 && (
-            <>
-              <h2
-                className="text-center mt-8 mb-4 font-bold uppercase tracking-widest"
-                style={{ fontSize: "13px", color: "#1A1A2E", letterSpacing: "2px" }}
-              >
-                Educación
-              </h2>
-              {education.map((edu, i) => (
-                <div key={i} className="mb-3">
-                  <div className="flex justify-between items-baseline">
-                    <div>
-                      <span className="font-bold" style={{ fontSize: "11px", color: "#1A1A2E" }}>
-                        {edu.institution}
-                      </span>
-                      {edu.degree && (
-                        <span className="ml-2" style={{ fontSize: "11px", color: "#1A1A2E" }}>
-                          {edu.degree}
-                        </span>
-                      )}
-                    </div>
-                    <span style={{ fontSize: "10px", color: "#666" }}>
-                      {edu.start_date && new Date(edu.start_date).getFullYear()}
-                      {edu.start_date && (edu.end_date ? ` - ${new Date(edu.end_date).getFullYear()}` : " - Presente")}
-                    </span>
-                  </div>
-                  {edu.description && (
-                    <p className="mt-1" style={{ fontSize: "11px", color: "#333", lineHeight: "1.6" }}>
-                      {edu.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ── SKILLS ADICIONALES ────────────────────────────── */}
-          {skills.length > 0 && (
-            <>
-              <h2
-                className="text-center mt-8 mb-4 font-bold uppercase tracking-widest"
-                style={{ fontSize: "13px", color: "#1A1A2E", letterSpacing: "2px" }}
-              >
-                Skills Adicionales
-              </h2>
-              <div style={{ fontSize: "11px", color: "#333", lineHeight: "1.8" }}>
-                {skills.map((s, i) => (
-                  <div key={i}>
-                    {"\u2022"} {s.name}
-                    {s.level ? ` (${s.level})` : ""}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* ── TECNOLOGÍAS ───────────────────────────────────── */}
-          {skills.length > 0 && (
-            <>
-              <h2
-                className="text-center mt-8 mb-4 font-bold uppercase tracking-widest"
-                style={{ fontSize: "13px", color: "#1A1A2E", letterSpacing: "2px" }}
-              >
-                Tecnologías
-              </h2>
-              <p style={{ fontSize: "11px", color: "#333" }}>
-                {skills.map((s) => s.name).join(", ")}
-              </p>
-            </>
-          )}
-
-          {/* ── EMPTY STATE ───────────────────────────────────── */}
-          {!data.name && experiences.length === 0 && skills.length === 0 && education.length === 0 && (
-            <div className="text-center py-12 text-neutral-400" style={{ fontFamily: "sans-serif" }}>
+          {/* Empty state */}
+          {!hasData && (
+            <div className="text-center py-16 text-neutral-400">
               <p className="text-lg">Tu CV está vacío</p>
               <p className="text-sm mt-2">
                 Ve a{" "}
@@ -228,27 +125,253 @@ export default function CVPreviewPage() {
               </p>
             </div>
           )}
+
+          {/* ── NOMBRE ─────────────────────────────────────── */}
+          {data.name && (
+            <h1
+              className="font-bold text-center mb-1"
+              style={{ fontSize: SIZE.name, color: COLOR, fontFamily: FONT }}
+            >
+              {data.name}
+            </h1>
+          )}
+
+          {/* ── CONTACTO (centrado, bullet separated) ─────── */}
+          {contactParts.length > 0 && (
+            <p
+              className="text-center mb-8"
+              style={{ fontSize: SIZE.contact, color: COLOR, fontFamily: FONT, letterSpacing: "0.02em" }}
+            >
+              {contactParts.join(" ● ")}
+            </p>
+          )}
+
+          {/* ── PERFIL PROFESIONAL ─────────────────────────── */}
+          {data.about && (
+            <Section title="PERFIL PROFESIONAL">
+              <p
+                style={{
+                  fontSize: SIZE.body,
+                  color: COLOR,
+                  lineHeight: "1.6",
+                  fontFamily: FONT,
+                }}
+              >
+                {data.about}
+              </p>
+            </Section>
+          )}
+
+          {/* ── EDUCACIÓN ──────────────────────────────────── */}
+          {education.length > 0 && (
+            <Section title="EDUCACIÓN">
+              {education.map((edu, i) => (
+                <div key={i} className="mb-3">
+                  <div className="flex justify-between items-baseline">
+                    <span
+                      className="font-bold"
+                      style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}
+                    >
+                      {edu.degree}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: SIZE.date,
+                        color: COLOR,
+                        fontFamily: FONT,
+                        whiteSpace: "nowrap",
+                        marginLeft: "12px",
+                      }}
+                    >
+                      {formatDateRange(edu.start_date, edu.end_date)}
+                    </span>
+                  </div>
+                  {edu.institution && (
+                    <p
+                      className="italic"
+                      style={{ fontSize: SIZE.body, color: COLOR, fontFamily: FONT }}
+                    >
+                      {edu.institution}
+                    </p>
+                  )}
+                  {edu.description && (
+                    <p
+                      className="mt-1"
+                      style={{
+                        fontSize: SIZE.body,
+                        color: COLOR,
+                        lineHeight: "1.6",
+                        fontFamily: FONT,
+                      }}
+                    >
+                      {edu.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </Section>
+          )}
+
+          {/* ── EXPERIENCIA PROFESIONAL ────────────────────── */}
+          {experiences.length > 0 && (
+            <Section title="EXPERIENCIA PROFESIONAL">
+              {experiences.map((exp, i) => (
+                <div key={i} className="mb-3">
+                  <div className="flex justify-between items-baseline">
+                    <span
+                      className="font-bold"
+                      style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}
+                    >
+                      {exp.company}
+                      {exp.title && (
+                        <span className="italic font-normal"> — {exp.title}</span>
+                      )}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: SIZE.date,
+                        color: COLOR,
+                        fontFamily: FONT,
+                        whiteSpace: "nowrap",
+                        marginLeft: "12px",
+                      }}
+                    >
+                      {formatDateRange(exp.start_date, exp.end_date)}
+                    </span>
+                  </div>
+                  {exp.description && (
+                    <div className="mt-1">
+                      {exp.description.split("\n").map((line, j) => (
+                        <p
+                          key={j}
+                          style={{
+                            fontSize: SIZE.body,
+                            color: COLOR,
+                            lineHeight: "1.6",
+                            fontFamily: FONT,
+                            paddingLeft: "16px",
+                            position: "relative",
+                          }}
+                        >
+                          <span style={{ position: "absolute", left: 0 }}>•</span>
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Section>
+          )}
+
+          {/* ── HABILIDADES (pipe-separated) ──────────────── */}
+          {skills.length > 0 && (
+            <Section title="HABILIDADES">
+              <p
+                style={{
+                  fontSize: SIZE.body,
+                  color: COLOR,
+                  lineHeight: "1.6",
+                  fontFamily: FONT,
+                }}
+              >
+                {skills.map((s) => s.name).join(" | ")}
+              </p>
+            </Section>
+          )}
+
+          {/* ── LOGROS DESTACADOS ──────────────────────────── */}
+          {achievements.length > 0 && (
+            <Section title="LOGROS DESTACADOS">
+              {achievements.map((ach, i) => (
+                <div key={i} className="mb-2">
+                  <p
+                    style={{ fontSize: SIZE.body, color: COLOR, fontFamily: FONT }}
+                  >
+                    <span className="font-bold">{ach.title}</span>
+                    {ach.description && ` — ${ach.description}`}
+                  </p>
+                </div>
+              ))}
+            </Section>
+          )}
+
+          {/* ── TECNOLOGÍAS ────────────────────────────────── */}
+          {programs.length > 0 && (
+            <Section title="TECNOLOGÍAS">
+              <p
+                style={{
+                  fontSize: SIZE.body,
+                  color: COLOR,
+                  lineHeight: "1.6",
+                  fontFamily: FONT,
+                }}
+              >
+                {programs.map((p) => p.name).join(" | ")}
+              </p>
+            </Section>
+          )}
+
+          {/* ── IDIOMAS ────────────────────────────────────── */}
+          {languages.length > 0 && (
+            <Section title="IDIOMAS">
+              <p
+                style={{
+                  fontSize: SIZE.body,
+                  color: COLOR,
+                  lineHeight: "1.6",
+                  fontFamily: FONT,
+                }}
+              >
+                {languages.map((l) => `${l.name} (${l.level})`).join(" | ")}
+              </p>
+            </Section>
+          )}
         </div>
       </div>
 
       {/* Print styles */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@400;700&display=swap');
         @media print {
-          body {
-            background: white !important;
-          }
-          nav, header, footer, .no-print {
-            display: none !important;
-          }
-          .print\\:shadow-none {
-            box-shadow: none !important;
-          }
-          .print\\:rounded-none {
-            border-radius: 0 !important;
-          }
+          body { background: white !important; }
+          nav, header, footer, .no-print { display: none !important; }
+          .print\\:shadow-none { box-shadow: none !important; }
+          .print\\:rounded-none { border-radius: 0 !important; }
         }
       `}</style>
     </div>
   );
+}
+
+// ── Section component ──────────────────────────────────────────────────────
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-5">
+      <h2
+        className="font-bold uppercase tracking-wide pb-1 mb-3"
+        style={{
+          fontSize: SIZE.section,
+          color: COLOR,
+          borderBottom: `1.5px solid ${COLOR}`,
+          fontFamily: FONT,
+        }}
+      >
+        {title}
+      </h2>
+      {children}
+    </div>
+  );
+}
+
+// ── Date formatting ────────────────────────────────────────────────────────
+
+function formatDateRange(start?: string | null, end?: string | null): string {
+  if (!start) return "";
+  const s = new Date(start);
+  const startStr = s.toLocaleDateString("es-AR", { month: "short", year: "numeric" });
+  if (!end) return `${startStr} - Presente`;
+  const e = new Date(end);
+  const endStr = e.toLocaleDateString("es-AR", { month: "short", year: "numeric" });
+  return `${startStr} - ${endStr}`;
 }

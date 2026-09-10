@@ -96,12 +96,24 @@ def delete_experience(user_id: UUID, experience_id: UUID) -> bool:
         return True
 
 
-def add_skill(user_id: UUID, name: str, level: str) -> UUID | None:
+def add_skill(user_id: UUID, name: str, level: str, skill_type: str = "tech") -> UUID | None:
     engine = get_engine()
     with Session(engine) as session:
+        # Dedup: skip if skill with same name+type already exists for this user
+        existing = session.exec(
+            select(Skills).where(
+                Skills.idUser == user_id,
+                Skills.name == name,
+                Skills.type == skill_type,
+            )
+        ).first()
+        if existing:
+            return existing.id
+
         skill = Skills(
             name=name,
             level=level,
+            type=skill_type,
             idUser=user_id,
         )
         session.add(skill)

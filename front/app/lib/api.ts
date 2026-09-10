@@ -28,6 +28,12 @@ import type {
   LogListResponse,
   LogStatsResponse,
   LogFilesResponse,
+  AchievementResponse,
+  AddAchievementRequest,
+  ProgramResponse,
+  AddProgramRequest,
+  LanguageResponse,
+  AddLanguageRequest,
 } from "./types";
 
 const API_BASE =
@@ -36,9 +42,10 @@ const API_BASE =
 async function request<T>(
   path: string,
   init?: RequestInit,
+  timeoutMs = 60_000,
 ): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000); // 60s timeout
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -229,7 +236,8 @@ export async function deleteSession(
 
 export async function analyzeCV(userId: string): Promise<CVAnalysis> {
   const params = new URLSearchParams({ user_id: userId });
-  return request(`/api/chat/cv-analysis?${params}`);
+  // El análisis llama a la IA: le damos más margen que al resto (120s)
+  return request(`/api/chat/cv-analysis?${params}`, undefined, 120_000);
 }
 
 // ─── CV Edit (Chat) ─────────────────────────────────────────────────────────
@@ -354,4 +362,100 @@ export async function getUserLogs(
   if (limit != null) params.set("limit", String(limit));
   const qs = params.toString();
   return request(`/api/logs/${userId}${qs ? `?${qs}` : ""}`);
+}
+
+// ─── Skill Catalog ─────────────────────────────────────────────────────
+
+export interface SkillCatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  is_custom: boolean;
+}
+
+export async function searchSkillCatalog(
+  query: string,
+): Promise<{ results: SkillCatalogItem[] }> {
+  const params = new URLSearchParams({ q: query });
+  return request(`/api/skills-catalog/search?${params}`);
+}
+
+export async function getSkillCatalogByCategory(): Promise<{
+  categories: Record<string, SkillCatalogItem[]>;
+}> {
+  return request("/api/skills-catalog/by-category");
+}
+
+export async function addCustomSkillCatalog(
+  name: string,
+  category?: string,
+): Promise<{ skill: SkillCatalogItem }> {
+  const params = new URLSearchParams({ name });
+  if (category) params.set("category", category);
+  return request(`/api/skills-catalog/custom?${params}`, {
+    method: "POST",
+  });
+}
+
+// ─── Achievements ────────────────────────────────────────────────────────────
+
+export async function addAchievement(
+  data: AddAchievementRequest,
+): Promise<AchievementResponse> {
+  return request("/api/achievements", {
+    method: "POST",
+    body: jsonBody(data),
+  });
+}
+
+export async function deleteAchievement(
+  achievementId: string,
+  userId: string,
+): Promise<{ message: string }> {
+  const params = new URLSearchParams({ user_id: userId });
+  return request(`/api/achievements/${achievementId}?${params}`, {
+    method: "DELETE",
+  });
+}
+
+// ─── Programs ────────────────────────────────────────────────────────────────
+
+export async function addProgram(
+  data: AddProgramRequest,
+): Promise<ProgramResponse> {
+  return request("/api/programs", {
+    method: "POST",
+    body: jsonBody(data),
+  });
+}
+
+export async function deleteProgram(
+  programId: string,
+  userId: string,
+): Promise<{ message: string }> {
+  const params = new URLSearchParams({ user_id: userId });
+  return request(`/api/programs/${programId}?${params}`, {
+    method: "DELETE",
+  });
+}
+
+// ─── Languages ───────────────────────────────────────────────────────────────
+
+export async function addLanguage(
+  data: AddLanguageRequest,
+): Promise<LanguageResponse> {
+  return request("/api/languages", {
+    method: "POST",
+    body: jsonBody(data),
+  });
+}
+
+export async function deleteLanguage(
+  languageId: string,
+  userId: string,
+): Promise<{ message: string }> {
+  const params = new URLSearchParams({ user_id: userId });
+  return request(`/api/languages/${languageId}?${params}`, {
+    method: "DELETE",
+  });
 }

@@ -13,6 +13,7 @@ class SkillResponse(BaseModel):
     id: str
     name: str
     level: str
+    type: str = "tech"
     idUser: str
     created_at: str
     updated_at: str
@@ -23,6 +24,7 @@ def _skill_to_response(skill: Skills) -> SkillResponse:
         id=str(skill.id),
         name=skill.name or "",
         level=skill.level or "",
+        type=skill.type or "tech",
         idUser=str(skill.idUser),
         created_at=skill.at_Created.isoformat() if skill.at_Created else "",
         updated_at=skill.at_Updated.isoformat() if skill.at_Updated else "",

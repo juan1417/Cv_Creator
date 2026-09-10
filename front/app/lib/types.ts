@@ -61,6 +61,9 @@ export interface FullCV {
   experiences: ExperienceResponse[];
   skills: SkillResponse[];
   education: EducationResponse[];
+  achievements: AchievementResponse[];
+  programs: ProgramResponse[];
+  languages: LanguageResponse[];
 }
 
 // ─── Experience ──────────────────────────────────────────────────────────────
@@ -103,6 +106,7 @@ export interface SkillResponse {
   id: string;
   name: string;
   level: string;
+  type: string;
 }
 
 export interface SkillListResponse {
@@ -114,6 +118,7 @@ export interface AddSkillRequest {
   user_id: string;
   name: string;
   level?: string;
+  type?: string;
 }
 
 // ─── Education ───────────────────────────────────────────────────────────────
@@ -209,28 +214,17 @@ export interface MetricDetail {
   suggestions: string[];
 }
 
-export interface CompletenessMetrics {
-  [key: string]: MetricDetail;
-}
-
-export interface ContentMetrics {
-  [key: string]: MetricDetail;
-}
-
-export interface ATSMetrics {
-  [key: string]: MetricDetail;
-}
-
-export interface StructureMetrics {
-  [key: string]: MetricDetail;
+export interface MetricGroup {
+  score: number;
+  details: MetricDetail[];
 }
 
 export interface CVAnalysis {
   overall_score: number;
-  completeness: CompletenessMetrics;
-  content: ContentMetrics;
-  ats_compatibility: ATSMetrics;
-  structure: StructureMetrics;
+  completeness: MetricGroup;
+  content: MetricGroup;
+  ats_compatibility: MetricGroup;
+  structure: MetricGroup;
   summary: string;
   top_improvements: string[];
 }
@@ -258,4 +252,44 @@ export interface LogStatsResponse {
 
 export interface LogFilesResponse {
   files: string[];
+}
+
+// ─── Achievement ─────────────────────────────────────────────────────────────
+
+export interface AchievementResponse {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface AddAchievementRequest {
+  user_id: string;
+  title: string;
+  description?: string;
+}
+
+// ─── Program ─────────────────────────────────────────────────────────────────
+
+export interface ProgramResponse {
+  id: string;
+  name: string;
+}
+
+export interface AddProgramRequest {
+  user_id: string;
+  name: string;
+}
+
+// ─── Language ────────────────────────────────────────────────────────────────
+
+export interface LanguageResponse {
+  id: string;
+  name: string;
+  level: string;
+}
+
+export interface AddLanguageRequest {
+  user_id: string;
+  name: string;
+  level?: string;
 }

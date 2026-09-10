@@ -9,7 +9,13 @@ _engine = None
 def get_engine():
     global _engine
     if _engine is None:
-        _engine = create_engine(os.getenv("DATABASE_URL"), echo=True)
+        _engine = create_engine(
+            os.getenv("DATABASE_URL"),
+            echo=False,
+            pool_pre_ping=True,       # verifica conexión antes de usarla
+            pool_recycle=300,         # recicla cada 5 min (Neon cierra idle SSL)
+            connect_args={"sslmode": "require"},
+        )
     return _engine
 
 def create_all_tables():

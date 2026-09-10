@@ -1,5 +1,11 @@
+"""Creates DOCX files using the paragraph-based plantilla.docx template.
+
+Strategy: Open template → clear all body content → rebuild paragraphs from scratch
+using the template's existing styles. This avoids placeholder duplication issues.
+"""
 import copy
 from pathlib import Path
+
 from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -8,194 +14,314 @@ from docx.oxml import OxmlElement
 
 from .cv_models import CvData
 
-FONT_NAME = "STIX Two Text"
-COLOR_DARK = RGBColor(0x1A, 0x1A, 0x2E)
-TEMPLATE_PATH = Path(__file__).parent / "Copia de Plantilla CV - Harvard.docx"
+FONT_NAME = "Arial"
+COLOR_TEXT = RGBColor(0x40, 0x40, 0x40)
+TEMPLATE_PATH = Path(__file__).parent / "plantilla.docx"
 
 
-def _set_cell_font(cell, text: str, size: float = 10.5, bold: bool = False,
-                   color: RGBColor | None = None, align: int | None = None):
-    cell.text = ""
-    p = cell.paragraphs[0]
-    if align is not None:
-        p.alignment = align
-    run = p.add_run(text)
-    run.font.name = FONT_NAME
-    run.font.size = Pt(size)
-    run.font.bold = bold
+# ---------------------------------------------------------------------------
+# Low-level XML helpers
+# ---------------------------------------------------------------------------
+
+def _make_run(text, bold=False, italic=False, size_pt=None, color=COLOR_TEXT, font=FONT_NAME):
+    """Create a <w:r> element with styling."""
+    r = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    rFonts = OxmlElement('w:rFonts')
+    rFonts.set(qn('w:ascii'), font)
+    rFonts.set(qn('w:hAnsi'), font)
+    rPr.append(rFonts)
+
+    if size_pt is not None:
+        for tag in ('w:sz', 'w:szCs'):
+            elem = OxmlElement(tag)
+            elem.set(qn('w:val'), str(int(size_pt * 2)))
+            rPr.append(elem)
+
+    if bold:
+        rPr.append(OxmlElement('w:b'))
+        rPr.append(OxmlElement('w:bCs'))
+    if italic:
+        rPr.append(OxmlElement('w:i'))
+        rPr.append(OxmlElement('w:iCs'))
+
     if color:
-        run.font.color.rgb = color
+        c = OxmlElement('w:color')
+        c.set(qn('w:val'), str(color))
+        rPr.append(c)
+
+    r.append(rPr)
+    t = OxmlElement('w:t')
+    t.set(qn('xml:space'), 'preserve')
+    t.text = text
+    r.append(t)
+    return r
 
 
-def _set_cell_multiline(cell, lines: list, size: float = 10.5, bold: bool = False,
-                         color: RGBColor | None = None):
-    cell.text = ""
-    for i, line in enumerate(lines):
-        p = cell.paragraphs[0] if i == 0 else cell.add_paragraph()
-        run = p.add_run(line)
-        run.font.name = FONT_NAME
-        run.font.size = Pt(size)
-        run.font.bold = bold
-        if color:
-            run.font.color.rgb = color
+def _clear_body(doc):
+    """Remove all paragraphs from document body, keeping the body element."""
+    body = doc.element.body
+    for child in list(body):
+        if child.tag == qn('w:p'):
+            body.remove(child)
 
 
-def _set_cell_multiline_raw(tc, lines: list, size: float = 10.5, bold: bool = False,
-                              color: RGBColor | None = None):
-    for p in tc.findall(qn('w:p')):
-        tc.remove(p)
-    for i, line in enumerate(lines):
-        p_elem = OxmlElement('w:p')
-        r_elem = OxmlElement('w:r')
-        rPr = OxmlElement('w:rPr')
-        rFonts = OxmlElement('w:rFonts')
-        rFonts.set(qn('w:ascii'), FONT_NAME)
-        rFonts.set(qn('w:hAnsi'), FONT_NAME)
-        rPr.append(rFonts)
-        sz = OxmlElement('w:sz')
-        sz.set(qn('w:val'), str(int(size * 2)))
-        rPr.append(sz)
-        if bold:
-            b = OxmlElement('w:b')
-            rPr.append(b)
-        if color:
-            color_elem = OxmlElement('w:color')
-            color_elem.set(qn('w:val'), str(color))
-            rPr.append(color_elem)
-        r_elem.append(rPr)
-        t = OxmlElement('w:t')
-        t.set(qn('xml:space'), 'preserve')
-        t.text = line
-        r_elem.append(t)
-        p_elem.append(r_elem)
-        tc.append(p_elem)
+def _add_para(doc, text="", bold=False, italic=False, size_pt=None,
+              color=COLOR_TEXT, alignment=None, style_name=None):
+    """Append a new paragraph to the document body."""
+    p_elem = OxmlElement('w:p')
+
+    # Style
+    if style_name:
+        pPr = OxmlElement('w:pPr')
+        pStyle = OxmlElement('w:pStyle')
+        try:
+            style = doc.styles[style_name]
+            pStyle.set(qn('w:val'), style.style_id)
+        except KeyError:
+            pStyle.set(qn('w:val'), style_name)
+        pPr.append(pStyle)
+
+        if alignment is not None:
+            jc = OxmlElement('w:jc')
+            align_map = {
+                WD_ALIGN_PARAGRAPH.CENTER: 'center',
+                WD_ALIGN_PARAGRAPH.LEFT: 'left',
+                WD_ALIGN_PARAGRAPH.RIGHT: 'right',
+            }
+            jc.set(qn('w:val'), align_map.get(alignment, 'left'))
+            pPr.append(jc)
+
+        p_elem.append(pPr)
+    elif alignment is not None:
+        pPr = OxmlElement('w:pPr')
+        jc = OxmlElement('w:jc')
+        align_map = {
+            WD_ALIGN_PARAGRAPH.CENTER: 'center',
+            WD_ALIGN_PARAGRAPH.LEFT: 'left',
+            WD_ALIGN_PARAGRAPH.RIGHT: 'right',
+        }
+        jc.set(qn('w:val'), align_map.get(alignment, 'left'))
+        pPr.append(jc)
+        p_elem.append(pPr)
+
+    if text:
+        p_elem.append(_make_run(text, bold=bold, italic=italic, size_pt=size_pt, color=color))
+
+    doc.element.body.append(p_elem)
+    return p_elem
 
 
-def _merge_cells(table, row: int, col_start: int, col_end: int):
-    table.cell(row, col_start).merge(table.cell(row, col_end))
+def _add_para_multirun(doc, runs_data, style_name=None, alignment=None):
+    """Append a paragraph with multiple styled runs."""
+    p_elem = OxmlElement('w:p')
+
+    if style_name:
+        pPr = OxmlElement('w:pPr')
+        pStyle = OxmlElement('w:pStyle')
+        try:
+            style = doc.styles[style_name]
+            pStyle.set(qn('w:val'), style.style_id)
+        except KeyError:
+            pStyle.set(qn('w:val'), style_name)
+        pPr.append(pStyle)
+        if alignment is not None:
+            jc = OxmlElement('w:jc')
+            align_map = {
+                WD_ALIGN_PARAGRAPH.CENTER: 'center',
+                WD_ALIGN_PARAGRAPH.LEFT: 'left',
+            }
+            jc.set(qn('w:val'), align_map.get(alignment, 'left'))
+            pPr.append(jc)
+        p_elem.append(pPr)
+
+    for rd in runs_data:
+        if rd.get('text'):
+            p_elem.append(_make_run(
+                rd['text'],
+                bold=rd.get('bold', False),
+                italic=rd.get('italic', False),
+                size_pt=rd.get('size_pt'),
+                color=rd.get('color', COLOR_TEXT),
+            ))
+
+    doc.element.body.append(p_elem)
+    return p_elem
 
 
-def _get_tr_elements(table):
-    tbl = table._tbl
-    return [child for child in tbl if child.tag == qn('w:tr')]
+def _add_empty(doc):
+    """Add an empty paragraph."""
+    _add_para(doc, "")
 
 
-def _set_row7(table, exp):
-    tbl = table._tbl
-    tr = _get_tr_elements(table)[7]
-    tcs = tr.findall(qn('w:tc'))
-    if len(tcs) >= 2:
-        tc0, tc1 = tcs[0], tcs[-1]
-        _set_cell_multiline_raw(tc0, [exp.company, exp.title], bold=True, color=COLOR_DARK)
-        _set_cell_multiline_raw(tc1, [exp.duration])
-    else:
-        _set_cell_multiline(table.cell(7, 0), [exp.company, exp.title], bold=True, color=COLOR_DARK)
-        _set_cell_multiline(table.cell(7, 4), [exp.duration])
+def _add_bullet(doc, text):
+    """Add a bullet-point paragraph (List Paragraph style)."""
+    p_elem = _add_para(doc, f"  {text}", style_name="List Paragraph")
+    return p_elem
 
 
-def _set_row12(table, edu, row_idx: int = 12):
-    tbl = table._tbl
-    tr = _get_tr_elements(table)[row_idx]
-    tcs = tr.findall(qn('w:tc'))
-    if len(tcs) >= 2:
-        tc0, tc1 = tcs[0], tcs[-1]
-        _set_cell_multiline_raw(tc0, [edu.school, edu.degree], bold=True, color=COLOR_DARK)
-        loc_year = [p for p in [edu.location, edu.year] if p]
-        _set_cell_multiline_raw(tc1, loc_year)
-    else:
-        _set_cell_multiline(table.cell(row_idx, 0), [edu.school, edu.degree], bold=True, color=COLOR_DARK)
-        loc_year = [p for p in [edu.location, edu.year] if p]
-        _set_cell_multiline(table.cell(row_idx, 3), loc_year)
+def _format_date(start: str, end: str | None) -> str:
+    """Format date range like 'mar. 2023 - Presente'."""
+    if not start:
+        return ""
+    from datetime import datetime
+    try:
+        s = datetime.strptime(start, "%Y-%m-%d")
+        start_str = s.strftime("%b %Y").capitalize()
+    except (ValueError, TypeError):
+        start_str = start
+    if not end:
+        return f"{start_str} - Presente"
+    try:
+        e = datetime.strptime(end, "%Y-%m-%d")
+        end_str = e.strftime("%b %Y").capitalize()
+    except (ValueError, TypeError):
+        end_str = end
+    return f"{start_str} - {end_str}"
 
 
-def _insert_exp_rows(table, exp, after_row: int = 9):
-    tbl = table._tbl
-    tr_list = _get_tr_elements(table)
+# ---------------------------------------------------------------------------
+# Section builders
+# ---------------------------------------------------------------------------
 
-    new_header = copy.deepcopy(tr_list[7])
-    new_desc = copy.deepcopy(tr_list[8])
+def _build_header(doc, cv):
+    """Name + contact line."""
+    _add_para(doc, cv.name.upper(), bold=True, size_pt=16, color=COLOR_TEXT,
+              alignment=WD_ALIGN_PARAGRAPH.LEFT)
 
-    ref_tr = tr_list[after_row]
-    ref_idx = list(tbl).index(ref_tr)
+    parts = []
+    if cv.address:
+        parts.append(cv.address)
+    if cv.email:
+        parts.append(cv.email)
+    phone = f"+{cv.phone}" if cv.phone and not cv.phone.startswith("+") else cv.phone
+    if phone:
+        parts.append(phone)
+    if cv.linkedin:
+        parts.append(cv.linkedin)
+    if cv.portfolio:
+        parts.append(cv.portfolio)
+    _add_para(doc, " ● ".join(parts), size_pt=11, color=COLOR_TEXT)
 
-    tbl.insert(ref_idx + 1, new_desc)
-    tbl.insert(ref_idx + 1, new_header)
+    _add_empty(doc)
+    _add_empty(doc)
 
-    new_idx = after_row + 1
-    _set_cell_multiline(table.cell(new_idx, 0), [exp.company, exp.title], bold=True, color=COLOR_DARK)
-    _set_cell_multiline(table.cell(new_idx, 4), [exp.duration])
-    _set_cell_font(table.cell(new_idx + 1, 0), exp.description, size=10.5)
 
+def _build_perfil(doc, cv):
+    """PERFIL PROFESIONAL section."""
+    _add_para(doc, "PERFIL PROFESIONAL", bold=True, size_pt=12, color=COLOR_TEXT)
+    _add_empty(doc)
+    _add_para(doc, cv.about if cv.about else "")
+    _add_empty(doc)
+
+
+def _build_educacion(doc, cv):
+    """EDUCACIÓN section."""
+    if not cv.education:
+        return
+    _add_para(doc, "EDUCACIÓN", bold=True, size_pt=12, color=COLOR_TEXT)
+    _add_empty(doc)
+
+    for edu in cv.education:
+        date_str = _format_date(edu.start_date, edu.end_date)
+        _add_para_multirun(doc, [
+            {'text': edu.degree, 'bold': True},
+            {'text': '\t'},
+            {'text': date_str},
+        ])
+        _add_para(doc, edu.institution, italic=True, size_pt=11)
+        if edu.description:
+            _add_para(doc, edu.description)
+        _add_empty(doc)
+
+
+def _build_experiencia(doc, cv):
+    """EXPERIENCIA PROFESIONAL section."""
+    if not cv.experience:
+        return
+    _add_para(doc, "EXPERIENCIA PROFESIONAL", bold=True, size_pt=12, color=COLOR_TEXT)
+    _add_empty(doc)
+
+    for exp in cv.experience:
+        date_str = _format_date(exp.start_date, exp.end_date)
+        _add_para_multirun(doc, [
+            {'text': exp.company, 'bold': True},
+            {'text': '\t'},
+            {'text': date_str},
+        ])
+        if exp.title:
+            _add_para(doc, exp.title)
+        if exp.description:
+            _add_para(doc, exp.description)
+        _add_empty(doc)
+
+
+def _build_habilidades(doc, cv):
+    """HABILIDADES section — pipe-separated."""
+    if not cv.skills:
+        return
+    _add_para(doc, "HABILIDADES", bold=True, size_pt=12, color=COLOR_TEXT)
+    _add_empty(doc)
+    _add_para(doc, " | ".join(cv.skills))
+    _add_empty(doc)
+
+
+def _build_logros(doc, cv):
+    """LOGROS DESTACADOS section."""
+    if not cv.achievements:
+        return
+    _add_para(doc, "LOGROS DESTACADOS", bold=True, size_pt=12, color=COLOR_TEXT)
+    _add_empty(doc)
+
+    for ach in cv.achievements:
+        text = ach.title
+        if ach.description:
+            text += f" — {ach.description}"
+        _add_para(doc, text)
+        _add_empty(doc)
+
+
+def _build_programas(doc, cv):
+    """PROGRAMAS section."""
+    if not cv.programs:
+        return
+    _add_para(doc, "PROGRAMAS", bold=True, size_pt=12, color=COLOR_TEXT)
+    _add_empty(doc)
+    _add_para(doc, " | ".join(cv.programs))
+    _add_empty(doc)
+
+
+def _build_idiomas(doc, cv):
+    """IDIOMAS section."""
+    if not cv.languages:
+        return
+    _add_para(doc, "IDIOMAS", bold=True, size_pt=12, color=COLOR_TEXT)
+    _add_empty(doc)
+    lang_parts = [f"{lang.name} ({lang.level})" if lang.level else lang.name for lang in cv.languages]
+    _add_para(doc, " | ".join(lang_parts))
+    _add_empty(doc)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def create_docx(cv_data: CvData, output_dir: str = "output") -> Path:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
     doc = Document(str(TEMPLATE_PATH))
-    table = doc.tables[0]
+    _clear_body(doc)
 
-    _set_cell_font(table.cell(0, 0), cv_data.name, size=24, bold=True, color=COLOR_DARK,
-                   align=WD_ALIGN_PARAGRAPH.CENTER)
-
-    contact_parts = [cv_data.address]
-    if cv_data.linkedin:
-        contact_parts.append(cv_data.linkedin)
-    phone = f"+{cv_data.phone}" if not cv_data.phone.startswith("+") else cv_data.phone
-    contact_parts.append(phone)
-    contact_parts.append(cv_data.email)
-    contact_str = " \u2022 ".join(contact_parts)
-    _set_cell_font(table.cell(1, 0), contact_str, size=11, align=WD_ALIGN_PARAGRAPH.CENTER)
-
-    _set_cell_font(table.cell(3, 0), cv_data.about, size=10.5)
-
-    _set_cell_font(table.cell(5, 0), "EXPERIENCIA PROFESIONAL", size=12, bold=True,
-                   color=COLOR_DARK, align=WD_ALIGN_PARAGRAPH.CENTER)
-
-    if cv_data.experience:
-        exp = cv_data.experience[0]
-        _set_row7(table, exp)
-        _set_cell_font(table.cell(8, 0), exp.description, size=10.5)
-
-    extra_exp_count = max(0, len(cv_data.experience) - 1)
-    for exp in cv_data.experience[1:]:
-        _insert_exp_rows(table, exp, after_row=9)
-
-    offset = 2 * extra_exp_count
-
-    _set_cell_font(table.cell(10 + offset, 0), "EDUCACIÓN", size=12, bold=True,
-                   color=COLOR_DARK, align=WD_ALIGN_PARAGRAPH.CENTER)
-
-    if cv_data.education:
-        edu = cv_data.education[0]
-        _set_row12(table, edu, row_idx=12 + offset)
-
-    for edu in cv_data.education[1:]:
-        tbl = table._tbl
-        tr_list = _get_tr_elements(table)
-        ref_tr = tr_list[13 + offset]
-
-        new_tr1 = copy.deepcopy(tr_list[12 + offset])
-        new_tr2 = copy.deepcopy(tr_list[13 + offset])
-        ref_idx = list(tbl).index(ref_tr)
-
-        tbl.insert(ref_idx + 1, new_tr2)
-        tbl.insert(ref_idx + 1, new_tr1)
-
-        _set_cell_multiline(table.cell(13 + offset, 0), [edu.school, edu.degree], bold=True, color=COLOR_DARK)
-        loc_year = [p for p in [edu.location, edu.year] if p]
-        _set_cell_multiline(table.cell(13 + offset, 3), loc_year)
-
-    _set_cell_font(table.cell(14 + offset, 0), "SKILLS ADICIONALES", size=12, bold=True,
-                   color=COLOR_DARK, align=WD_ALIGN_PARAGRAPH.CENTER)
-
-    skills_text = "\n".join(f"\u2022 {s}" for s in cv_data.skills) if cv_data.skills else ""
-    _set_cell_font(table.cell(16 + offset, 0), skills_text, size=10.5)
-
-    _set_cell_font(table.cell(17 + offset, 0), "TECNOLOGÍAS", size=12, bold=True,
-                   color=COLOR_DARK, align=WD_ALIGN_PARAGRAPH.CENTER)
-
-    tech_text = ", ".join(cv_data.skills) if cv_data.skills else ""
-    _set_cell_font(table.cell(19 + offset, 0), tech_text, size=10.5)
+    _build_header(doc, cv_data)
+    _build_perfil(doc, cv_data)
+    _build_educacion(doc, cv_data)
+    _build_experiencia(doc, cv_data)
+    _build_habilidades(doc, cv_data)
+    _build_logros(doc, cv_data)
+    _build_programas(doc, cv_data)
+    _build_idiomas(doc, cv_data)
 
     safe_name = cv_data.name.replace(" ", "_").replace("/", "_")
     file_path = output_path / f"{safe_name}_cv.docx"

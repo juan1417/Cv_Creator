@@ -10,6 +10,9 @@ from models.cv import CV
 from models.experience import Experience
 from models.skill import Skills
 from models.education import Education
+from models.achievement import Achievement
+from models.program import Program
+from models.language import Language
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
@@ -61,6 +64,7 @@ class SkillResponse(BaseModel):
     id: str
     name: str
     level: str
+    type: str = "tech"
 
 
 class EducationResponse(BaseModel):
@@ -72,11 +76,31 @@ class EducationResponse(BaseModel):
     description: str
 
 
+class AchievementResponse(BaseModel):
+    id: str
+    title: str
+    description: str
+
+
+class ProgramResponse(BaseModel):
+    id: str
+    name: str
+
+
+class LanguageResponse(BaseModel):
+    id: str
+    name: str
+    level: str
+
+
 class FullCVResponse(BaseModel):
     cv: CVResponse
     experiences: list[ExperienceResponse]
     skills: list[SkillResponse]
     education: list[EducationResponse]
+    achievements: list[AchievementResponse]
+    programs: list[ProgramResponse]
+    languages: list[LanguageResponse]
 
 
 def _format_datetime(dt: datetime | None) -> str:
@@ -161,6 +185,18 @@ async def get_full_cv(user_id: UUID):
             select(Education).where(Education.idUser == user_id).order_by(Education.start_date.desc())
         ).all())
 
+        achievements = list(session.exec(
+            select(Achievement).where(Achievement.idUser == user_id)
+        ).all())
+
+        programs = list(session.exec(
+            select(Program).where(Program.idUser == user_id)
+        ).all())
+
+        languages = list(session.exec(
+            select(Language).where(Language.idUser == user_id)
+        ).all())
+
         return FullCVResponse(
             cv=CVResponse(
                 id=str(cv.id),
@@ -186,7 +222,7 @@ async def get_full_cv(user_id: UUID):
                 for e in experiences
             ],
             skills=[
-                SkillResponse(id=str(s.id), name=s.name or "", level=s.level or "")
+                SkillResponse(id=str(s.id), name=s.name or "", level=s.level or "", type=s.type or "tech")
                 for s in skills
             ],
             education=[
@@ -199,6 +235,18 @@ async def get_full_cv(user_id: UUID):
                     description=ed.description or "",
                 )
                 for ed in education
+            ],
+            achievements=[
+                AchievementResponse(id=str(a.id), title=a.title or "", description=a.description or "")
+                for a in achievements
+            ],
+            programs=[
+                ProgramResponse(id=str(p.id), name=p.name or "")
+                for p in programs
+            ],
+            languages=[
+                LanguageResponse(id=str(l.id), name=l.name or "", level=l.level or "")
+                for l in languages
             ],
         )
 
@@ -264,6 +312,18 @@ async def delete_cv(user_id: UUID):
         education = session.exec(select(Education).where(Education.idUser == user_id)).all()
         for edu in education:
             session.delete(edu)
+
+        achievements = session.exec(select(Achievement).where(Achievement.idUser == user_id)).all()
+        for ach in achievements:
+            session.delete(ach)
+
+        programs = session.exec(select(Program).where(Program.idUser == user_id)).all()
+        for prog in programs:
+            session.delete(prog)
+
+        languages = session.exec(select(Language).where(Language.idUser == user_id)).all()
+        for lang in languages:
+            session.delete(lang)
 
         session.delete(cv)
         session.commit()

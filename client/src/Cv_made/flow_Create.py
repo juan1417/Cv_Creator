@@ -4,7 +4,7 @@ from typing import List
 
 from prefect import flow, task
 
-from .cv_models import CvData, Experience, Education
+from .cv_models import CvData, Experience, Education, Achievement, Language
 from .docx_creator import create_docx
 from .pdf_creator import create_pdf
 
@@ -59,7 +59,8 @@ def load_cv_from_json(json_path: str) -> CvData:
         Experience(
             title=e.get("title", ""),
             company=e.get("company", ""),
-            duration=e.get("duration", ""),
+            start_date=e.get("start_date", ""),
+            end_date=e.get("end_date"),
             description=e.get("description", ""),
         )
         for e in data.get("experience", [])
@@ -68,11 +69,28 @@ def load_cv_from_json(json_path: str) -> CvData:
     education = [
         Education(
             degree=e.get("degree", ""),
-            school=e.get("school", ""),
-            year=e.get("year", ""),
-            location=e.get("location", ""),
+            institution=e.get("institution", ""),
+            start_date=e.get("start_date", ""),
+            end_date=e.get("end_date"),
+            description=e.get("description", ""),
         )
         for e in data.get("education", [])
+    ]
+
+    achievements = [
+        Achievement(
+            title=a.get("title", ""),
+            description=a.get("description", ""),
+        )
+        for a in data.get("achievements", [])
+    ]
+
+    languages = [
+        Language(
+            name=l.get("name", ""),
+            level=l.get("level", ""),
+        )
+        for l in data.get("languages", [])
     ]
 
     return CvData(
@@ -85,6 +103,10 @@ def load_cv_from_json(json_path: str) -> CvData:
         skills=data.get("skills", []),
         education=education,
         linkedin=data.get("linkedin", ""),
+        portfolio=data.get("portfolio", ""),
+        achievements=achievements,
+        programs=data.get("programs", []),
+        languages=languages,
     )
 
 

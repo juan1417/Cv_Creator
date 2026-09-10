@@ -1,122 +1,131 @@
+"""Creates PDF files matching the paragraph-based plantilla.docx template.
+
+Uses ReportLab to generate A4 PDFs with the same section order and styling
+as the DOCX template: Arial, #404040 color, ● contact separator, pipe-separated skills.
+"""
 from pathlib import Path
+from datetime import datetime
+
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm, mm
+from reportlab.lib.units import mm, cm
 from reportlab.lib.colors import HexColor
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_LEFT
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    SimpleDocTemplate, Paragraph, Spacer, HRFlowable
 )
 
 from .cv_models import CvData
 
-COLOR_DARK = HexColor("#1a1a2e")
-COLOR_LIGHT = HexColor("#f0f0f5")
-COLOR_LINE = HexColor("#cccccc")
+COLOR_TEXT = HexColor("#404040")
+COLOR_LIGHT = HexColor("#666666")
+FONT = "Helvetica"
+FONT_BOLD = "Helvetica-Bold"
+FONT_ITALIC = "Helvetica-Oblique"
 
 
 def _get_styles():
     styles = getSampleStyleSheet()
 
     styles.add(ParagraphStyle(
-        name="CvTitle",
-        parent=styles["Title"],
-        fontName="Helvetica-Bold",
-        fontSize=22,
-        textColor=COLOR_DARK,
-        alignment=TA_CENTER,
-        spaceAfter=4 * mm,
+        name="CvName",
+        fontName=FONT_BOLD,
+        fontSize=16,
+        textColor=COLOR_TEXT,
+        spaceAfter=2 * mm,
     ))
 
     styles.add(ParagraphStyle(
         name="CvContact",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=10,
-        textColor=HexColor("#444444"),
-        alignment=TA_CENTER,
+        fontName=FONT,
+        fontSize=11,
+        textColor=COLOR_TEXT,
         spaceAfter=6 * mm,
     ))
 
     styles.add(ParagraphStyle(
-        name="CvSectionHeader",
-        parent=styles["Heading2"],
-        fontName="Helvetica-Bold",
-        fontSize=13,
-        textColor=COLOR_DARK,
-        spaceBefore=8 * mm,
-        spaceAfter=3 * mm,
-        borderWidth=0,
-        borderPadding=0,
+        name="CvSection",
+        fontName=FONT_BOLD,
+        fontSize=12,
+        textColor=COLOR_TEXT,
+        spaceBefore=6 * mm,
+        spaceAfter=2 * mm,
     ))
 
     styles.add(ParagraphStyle(
-        name="CvNormal",
-        parent=styles["Normal"],
-        fontName="Helvetica",
+        name="CvBody",
+        fontName=FONT,
         fontSize=10,
-        textColor=HexColor("#333333"),
+        textColor=COLOR_TEXT,
         leading=14,
         spaceAfter=2 * mm,
     ))
 
     styles.add(ParagraphStyle(
         name="CvSmall",
-        parent=styles["Normal"],
-        fontName="Helvetica",
-        fontSize=9,
-        textColor=HexColor("#555555"),
-        leading=12,
-        spaceAfter=1 * mm,
-    ))
-
-    styles.add(ParagraphStyle(
-        name="CvJobTitle",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
+        fontName=FONT,
         fontSize=11,
-        textColor=COLOR_DARK,
+        textColor=COLOR_TEXT,
+        leading=14,
         spaceAfter=1 * mm,
     ))
 
     styles.add(ParagraphStyle(
-        name="CvCompany",
-        parent=styles["Normal"],
-        fontName="Helvetica-Bold",
+        name="CvExpHeader",
+        fontName=FONT,
         fontSize=10,
-        textColor=HexColor("#333333"),
+        textColor=COLOR_TEXT,
         spaceAfter=1 * mm,
     ))
 
     styles.add(ParagraphStyle(
-        name="CvDates",
-        parent=styles["Normal"],
-        fontName="Helvetica-Oblique",
-        fontSize=9,
-        textColor=HexColor("#666666"),
-        spaceAfter=2 * mm,
+        name="CvInstitution",
+        fontName=FONT_ITALIC,
+        fontSize=11,
+        textColor=COLOR_TEXT,
+        spaceAfter=3 * mm,
     ))
 
     styles.add(ParagraphStyle(
         name="CvBullet",
-        parent=styles["Normal"],
-        fontName="Helvetica",
+        fontName=FONT,
         fontSize=10,
-        textColor=HexColor("#333333"),
+        textColor=COLOR_TEXT,
         leading=13,
         leftIndent=10,
-        spaceAfter=1 * mm,
         bulletIndent=0,
+        spaceAfter=1 * mm,
+    ))
+
+    styles.add(ParagraphStyle(
+        name="CvSkills",
+        fontName=FONT,
+        fontSize=10,
+        textColor=COLOR_TEXT,
+        leading=14,
+        spaceAfter=2 * mm,
     ))
 
     return styles
 
 
-def _section_line():
-    return HRFlowable(
-        width="100%", thickness=0.5, color=COLOR_LINE,
-        spaceBefore=0, spaceAfter=4 * mm
-    )
+def _format_date(start: str, end: str | None) -> str:
+    """Format date range like 'Mar 2023 - Presente'."""
+    if not start:
+        return ""
+    try:
+        s = datetime.strptime(start, "%Y-%m-%d")
+        start_str = s.strftime("%b %Y")
+    except (ValueError, TypeError):
+        start_str = start
+    if not end:
+        return f"{start_str} - Presente"
+    try:
+        e = datetime.strptime(end, "%Y-%m-%d")
+        end_str = e.strftime("%b %Y")
+    except (ValueError, TypeError):
+        end_str = end
+    return f"{start_str} - {end_str}"
 
 
 def create_pdf(cv_data: CvData, output_dir: str = "output") -> Path:
@@ -126,78 +135,79 @@ def create_pdf(cv_data: CvData, output_dir: str = "output") -> Path:
     styles = _get_styles()
     elements = []
 
-    elements.append(Paragraph(cv_data.name, styles["CvTitle"]))
+    # --- Name ---
+    elements.append(Paragraph(cv_data.name.upper(), styles["CvName"]))
 
-    contact_parts = [cv_data.address]
+    # --- Contact ---
+    parts = []
+    if cv_data.address:
+        parts.append(cv_data.address)
+    if cv_data.email:
+        parts.append(cv_data.email)
+    phone = f"+{cv_data.phone}" if cv_data.phone and not cv_data.phone.startswith("+") else cv_data.phone
+    if phone:
+        parts.append(phone)
     if cv_data.linkedin:
-        contact_parts.append(cv_data.linkedin)
-    phone = f"+{cv_data.phone}" if not cv_data.phone.startswith("+") else cv_data.phone
-    contact_parts.append(phone)
-    contact_parts.append(cv_data.email)
-    contact_str = "  |  ".join(contact_parts)
-    elements.append(Paragraph(contact_str, styles["CvContact"]))
+        parts.append(cv_data.linkedin)
+    if cv_data.portfolio:
+        parts.append(cv_data.portfolio)
+    elements.append(Paragraph(" ● ".join(parts), styles["CvContact"]))
 
-    elements.append(_section_line())
-
+    # --- PERFIL PROFESIONAL ---
     if cv_data.about:
-        elements.append(Paragraph("SOBRE MÍ", styles["CvSectionHeader"]))
-        elements.append(Paragraph(cv_data.about, styles["CvNormal"]))
+        elements.append(Paragraph("PERFIL PROFESIONAL", styles["CvSection"]))
+        elements.append(Paragraph(cv_data.about, styles["CvBody"]))
 
-    if cv_data.experience:
-        elements.append(Paragraph("EXPERIENCIA PROFESIONAL", styles["CvSectionHeader"]))
-        elements.append(_section_line())
-        for exp in cv_data.experience:
-            job_data = [[
-                Paragraph(f"<b>{exp.title}</b>", styles["CvJobTitle"]),
-                Paragraph(exp.duration, styles["CvDates"]),
-            ]]
-            job_table = Table(job_data, colWidths=[12 * cm, 5 * cm])
-            job_table.setStyle(TableStyle([
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]))
-            elements.append(job_table)
-            elements.append(Paragraph(exp.company, styles["CvCompany"]))
-            if exp.description:
-                elements.append(Paragraph(exp.description, styles["CvNormal"]))
-            elements.append(Spacer(1, 3 * mm))
-
+    # --- EDUCACIÓN ---
     if cv_data.education:
-        elements.append(Paragraph("EDUCACIÓN", styles["CvSectionHeader"]))
-        elements.append(_section_line())
+        elements.append(Paragraph("EDUCACIÓN", styles["CvSection"]))
         for edu in cv_data.education:
-            edu_data = [[
-                Paragraph(f"<b>{edu.degree}</b>", styles["CvJobTitle"]),
-                Paragraph(edu.year, styles["CvDates"]),
-            ]]
-            edu_table = Table(edu_data, colWidths=[12 * cm, 5 * cm])
-            edu_table.setStyle(TableStyle([
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]))
-            elements.append(edu_table)
-            elements.append(Paragraph(edu.school, styles["CvCompany"]))
-            if edu.location:
-                elements.append(Paragraph(edu.location, styles["CvDates"]))
-            elements.append(Spacer(1, 3 * mm))
+            date_str = _format_date(edu.start_date, edu.end_date)
+            exp_line = f"<b>{edu.degree}</b>\t{date_str}"
+            elements.append(Paragraph(exp_line, styles["CvExpHeader"]))
+            elements.append(Paragraph(f"<i>{edu.institution}</i>", styles["CvInstitution"]))
+            if edu.description:
+                elements.append(Paragraph(edu.description, styles["CvBody"]))
 
+    # --- EXPERIENCIA PROFESIONAL ---
+    if cv_data.experience:
+        elements.append(Paragraph("EXPERIENCIA PROFESIONAL", styles["CvSection"]))
+        for exp in cv_data.experience:
+            date_str = _format_date(exp.start_date, exp.end_date)
+            header = f"<b>{exp.company}</b>\t{date_str}"
+            elements.append(Paragraph(header, styles["CvExpHeader"]))
+            if exp.title:
+                elements.append(Paragraph(exp.title, styles["CvBody"]))
+            if exp.description:
+                elements.append(Paragraph(exp.description, styles["CvBody"]))
+            elements.append(Spacer(1, 2 * mm))
+
+    # --- HABILIDADES ---
     if cv_data.skills:
-        elements.append(Paragraph("SKILLS ADICIONALES", styles["CvSectionHeader"]))
-        elements.append(_section_line())
-        for skill in cv_data.skills:
-            elements.append(Paragraph(f"\u2022  {skill}", styles["CvBullet"]))
+        elements.append(Paragraph("HABILIDADES", styles["CvSection"]))
+        elements.append(Paragraph(" | ".join(cv_data.skills), styles["CvSkills"]))
 
-        elements.append(Paragraph("TECNOLOGÍAS", styles["CvSectionHeader"]))
-        elements.append(_section_line())
-        tech_str = ", ".join(cv_data.skills)
-        elements.append(Paragraph(tech_str, styles["CvNormal"]))
+    # --- LOGROS DESTACADOS ---
+    if cv_data.achievements:
+        elements.append(Paragraph("LOGROS DESTACADOS", styles["CvSection"]))
+        for ach in cv_data.achievements:
+            text = ach.title
+            if ach.description:
+                text += f" — {ach.description}"
+            elements.append(Paragraph(text, styles["CvBody"]))
 
+    # --- PROGRAMAS ---
+    if cv_data.programs:
+        elements.append(Paragraph("PROGRAMAS", styles["CvSection"]))
+        elements.append(Paragraph(" | ".join(cv_data.programs), styles["CvSkills"]))
+
+    # --- IDIOMAS ---
+    if cv_data.languages:
+        elements.append(Paragraph("IDIOMAS", styles["CvSection"]))
+        lang_parts = [f"{lang.name} ({lang.level})" if lang.level else lang.name for lang in cv_data.languages]
+        elements.append(Paragraph(" | ".join(lang_parts), styles["CvSkills"]))
+
+    # --- Save ---
     safe_name = cv_data.name.replace(" ", "_").replace("/", "_")
     file_path = output_path / f"{safe_name}_cv.pdf"
 

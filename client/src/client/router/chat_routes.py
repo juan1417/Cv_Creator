@@ -96,6 +96,7 @@ class AddSkillRequest(BaseModel):
     user_id: UUID
     name: str
     level: str = ""
+    type: str = "tech"  # "tech" or "soft"
 
 
 class AddEducationRequest(BaseModel):
@@ -243,7 +244,8 @@ async def delete_session(session_id: UUID, user_id: UUID):
 @router.get("/cv-analysis", response_model=CVAnalysis)
 async def cv_analysis(user_id: UUID):
     try:
-        result = analyze_cv(user_id)
+        # En thread para no bloquear el event loop mientras la IA responde
+        result = await asyncio.to_thread(analyze_cv, user_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -351,7 +353,7 @@ async def remove_experience(experience_id: UUID, user_id: UUID):
 async def create_skill(req: AddSkillRequest):
     _verify_cv_ownership(req.user_id)
 
-    skill_id = add_skill(req.user_id, req.name, req.level)
+    skill_id = add_skill(req.user_id, req.name, req.level, req.type)
     if not skill_id:
         raise HTTPException(status_code=500, detail="Error al crear la skill")
 

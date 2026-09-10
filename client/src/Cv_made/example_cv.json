@@ -1,28 +1,38 @@
 {
-    "name": "John Doe",
-    "email": "john.doe@example.com",
-    "phone": "123-456-7890",
-    "address": "123 Main St, City, State 12345",
-    "about": "A passionate software engineer with experience in developing web applications.",
-    "experience": [
-        {
-            "title": "Software Engineer",
-            "company": "ABC Corp",
-            "duration": "2020 - Present"
-        }
-    ],
-    "education": [
-        {
-            "degree": "Bachelor of Science in Computer Science",
-            "school": "XYZ University",
-            "year": "2020"
-        }
-    ],
-    "skills": [
-        "Python",
-        "JavaScript",
-        "React",
-        "SQL"
-    ]
-    
+  "name": "Juan Perez",
+  "email": "juan@email.com",
+  "phone": "+54 11 1234-5678",
+  "address": "Buenos Aires, Argentina",
+  "about": "Profesional con 5 años de experiencia en análisis de datos.",
+  "linkedin": "linkedin.com/in/juanperez",
+  "portfolio": "https://juanperez.com",
+  "experience": [
+    {
+      "title": "Data Analyst",
+      "company": "Tech Corp",
+      "start_date": "2023-01-01",
+      "end_date": null,
+      "description": "Análisis de datos y reportes ejecutivos."
+    }
+  ],
+  "education": [
+    {
+      "degree": "Licenciatura en Administración",
+      "institution": "UBA",
+      "start_date": "2018-03-01",
+      "end_date": "2022-12-15",
+      "description": "Graduado con honores."
+    }
+  ],
+  "skills": ["Python", "SQL", "Power BI", "Excel", "KPIs", "Liderazgo", "Comunicación"],
+  "achievements": [
+    {"title": "Best Employee Award", "description": "Reconocimiento por excelencia en 2025"},
+    {"title": "Certificación Google Analytics", "description": "Completada en 2024"}
+  ],
+  "programs": ["Power BI", "Tableau", "Excel Avanzado", "SQL Server"],
+  "languages": [
+    {"name": "Español", "level": "Nativo"},
+    {"name": "Inglés", "level": "Avanzado (C1)"},
+    {"name": "Portugués", "level": "Intermedio (B1)"}
+  ]
 }

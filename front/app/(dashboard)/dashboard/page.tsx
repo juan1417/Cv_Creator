@@ -56,16 +56,16 @@ export default function DashboardPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-zinc-900">
+        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
           Bienvenido, {user.username}
         </h2>
-        <p className="text-zinc-500 mt-1">
+        <p className="text-zinc-500 dark:text-zinc-400 mt-1">
           Gestiona tu CV y potencia tu busqueda laboral
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6">
+        <div className="card p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
               <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,7 +101,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6">
+        <div className="card p-6">
           <h3 className="font-semibold text-zinc-900 mb-4">Acciones rapidas</h3>
           <div className="space-y-2">
             <Link
@@ -137,7 +137,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6">
+        <div className="card p-6">
           <h3 className="font-semibold text-zinc-900 mb-4">Sesiones recientes</h3>
           {loading ? (
             <p className="text-sm text-zinc-400">Cargando...</p>

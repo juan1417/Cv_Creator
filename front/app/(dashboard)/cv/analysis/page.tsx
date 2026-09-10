@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/app/lib/auth";
 import { analyzeCV } from "@/app/lib/api";
-import type { CVAnalysis, MetricDetail } from "@/app/lib/types";
+import type { CVAnalysis, MetricGroup } from "@/app/lib/types";
 import Link from "next/link";
 
 // ─── Analysis Page ───────────────────────────────────────────────────────────
@@ -186,18 +186,16 @@ function MetricCard({
   metrics,
 }: {
   title: string;
-  metrics: Record<string, MetricDetail>;
+  metrics: MetricGroup;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const entries = Object.values(metrics);
+  const details = metrics.details ?? [];
 
-  // Calculate average score
-  const totalScore = entries.reduce((sum, m) => sum + m.score, 0);
-  const totalMax = entries.reduce((sum, m) => sum + m.max_score, 0);
-  const avgScore = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
+  // Card score comes from the group score
+  const avgScore = Math.round(metrics.score ?? 0);
 
-  // Collect all suggestions
-  const allSuggestions = entries.flatMap((m) => m.suggestions);
+  // Collect all suggestions from details
+  const allSuggestions = details.flatMap((m) => m.suggestions ?? []);
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -220,7 +218,7 @@ function MetricCard({
 
       {/* Detail items */}
       <div className="space-y-2">
-        {entries.map((metric, i) => (
+        {details.map((metric, i) => (
           <div
             key={i}
             className="flex items-center justify-between text-sm"
