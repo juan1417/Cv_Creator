@@ -3,7 +3,6 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Estilos Tailwind para cada elemento markdown (sin plugin typography)
 const components: Components = {
   p: ({ children }) => (
     <p className="my-1.5 leading-relaxed first:mt-0 last:mb-0">{children}</p>
@@ -34,30 +33,29 @@ const components: Components = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400"
+      className="text-indigo-400 underline hover:text-indigo-300"
     >
       {children}
     </a>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="my-1.5 border-l-4 border-zinc-300 pl-3 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
+    <blockquote className="my-1.5 border-l-4 border-zinc-600 pl-3 text-zinc-400">
       {children}
     </blockquote>
   ),
-  hr: () => <hr className="my-3 border-zinc-200 dark:border-zinc-700" />,
+  hr: () => <hr className="my-3 border-zinc-700" />,
   pre: ({ children }) => (
-    <pre className="my-2 overflow-x-auto rounded-lg bg-zinc-900 p-3 text-xs text-zinc-100 dark:bg-black/40">
+    <pre className="my-2 overflow-x-auto rounded-lg bg-zinc-950 border border-zinc-800 p-3 text-xs text-zinc-100">
       {children}
     </pre>
   ),
-  code: ({ className, children }) => {
+  code: ({ className: _className, children }) => {
     const isInline = !String(children).includes("\n");
     if (!isInline) {
-      // Bloque de código: lo estiliza el <pre> padre
       return <code className="font-mono">{children}</code>;
     }
     return (
-      <code className="rounded bg-zinc-200 px-1 py-0.5 font-mono text-[0.85em] dark:bg-zinc-700">
+      <code className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[0.85em] text-indigo-300">
         {children}
       </code>
     );
@@ -68,12 +66,12 @@ const components: Components = {
     </div>
   ),
   th: ({ children }) => (
-    <th className="border border-zinc-300 px-2 py-1 text-left font-semibold dark:border-zinc-600">
+    <th className="border border-zinc-700 px-2 py-1 text-left font-semibold text-zinc-300">
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="border border-zinc-300 px-2 py-1 dark:border-zinc-600">
+    <td className="border border-zinc-700 px-2 py-1 text-zinc-400">
       {children}
     </td>
   ),

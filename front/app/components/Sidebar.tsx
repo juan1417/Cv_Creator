@@ -8,8 +8,9 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: GridIcon },
   { href: "/cv/edit", label: "Mi CV", icon: DocumentIcon },
   { href: "/cv/preview", label: "Vista Previa", icon: EyeIcon },
+  { href: "/cv/compare", label: "Comparar CV", icon: CompareIcon },
   { href: "/chat", label: "Asistente IA", icon: ChatIcon },
-  { href: "/cv/analysis", label: "Analisis", icon: ChartIcon },
+  { href: "/cv/analysis", label: "Análisis", icon: ChartIcon },
   { href: "/cv/generate", label: "Generar CV", icon: DownloadIcon },
 ];
 
@@ -73,6 +74,17 @@ function DownloadIcon({ className }: { className?: string }) {
   );
 }
 
+function CompareIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 3h5v5" />
+      <path d="M8 3H3v5" />
+      <path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" />
+      <path d="m15 9 6-6" />
+    </svg>
+  );
+}
+
 function LogOutIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -96,22 +108,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full bg-zinc-900 text-white
+          fixed top-0 left-0 z-50 h-full bg-[#0D1117] border-r border-zinc-800/80
           transition-all duration-300 ease-in-out
           ${isOpen ? "w-60 translate-x-0" : "w-16 -translate-x-full lg:translate-x-0"}
         `}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center h-16 px-4 border-b border-zinc-800">
+          {/* Logo */}
+          <div className="flex items-center h-16 px-4 border-b border-zinc-800/80">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white shadow-sm">
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-sm font-bold text-white shadow-lg shadow-indigo-500/20">
                 CV
               </span>
               <span className="text-lg font-bold text-white whitespace-nowrap overflow-hidden">
@@ -120,6 +133,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           </div>
 
+          {/* Navigation */}
           <nav className="flex-1 py-4 space-y-1 px-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -130,10 +144,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={onClose}
                   className={`
                     flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                    transition-colors duration-150
+                    transition-all duration-200
                     ${isActive
-                      ? "bg-blue-600/15 text-blue-400"
-                      : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                      ? "bg-indigo-500/15 text-indigo-400 shadow-sm"
+                      : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
                     }
                   `}
                   title={!isOpen ? item.label : undefined}
@@ -147,11 +161,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             })}
           </nav>
 
-          <div className="border-t border-zinc-800 p-3">
+          {/* User section */}
+          <div className="border-t border-zinc-800/80 p-3">
             {user && (
               <div className={`mb-3 ${isOpen ? "" : "hidden lg:block"}`}>
                 <p className="text-sm font-medium text-white truncate">{user.username}</p>
-                <p className="text-xs text-zinc-400 truncate">{user.email}</p>
+                <p className="text-xs text-zinc-500 truncate">{user.email}</p>
               </div>
             )}
             <button
@@ -159,12 +174,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 logout();
                 window.location.href = "/login";
               }}
-              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors duration-150"
-              title="Cerrar sesion"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200 transition-all duration-200"
+              title="Cerrar sesión"
             >
               <LogOutIcon className="w-5 h-5 flex-shrink-0" />
               <span className={`whitespace-nowrap overflow-hidden ${isOpen ? "" : "hidden lg:hidden"}`}>
-                Cerrar sesion
+                Cerrar sesión
               </span>
             </button>
           </div>

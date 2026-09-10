@@ -293,3 +293,45 @@ export interface AddLanguageRequest {
   name: string;
   level?: string;
 }
+
+// ─── Job Comparison & Adaptation ─────────────────────────────────────────────
+
+export interface MatchingSkill {
+  name: string;
+  level: string;
+  relevance: string;
+}
+
+export interface MissingSkill {
+  name: string;
+  importance: string;
+  suggestion: string;
+}
+
+export interface JobMatchResult {
+  match_score: number;
+  matching_skills: MatchingSkill[];
+  missing_skills: MissingSkill[];
+  strengths: string[];
+  weaknesses: string[];
+  summary: string;
+}
+
+export interface AdaptedExperience {
+  company: string;
+  title: string;
+  description: string;
+}
+
+export interface AdaptedSkill {
+  name: string;
+  level: string;
+}
+
+export interface CVAdaptationResult {
+  adapted_about: string;
+  adapted_experiences: AdaptedExperience[];
+  adapted_skills: AdaptedSkill[];
+  key_changes: string[];
+  tips: string[];
+}

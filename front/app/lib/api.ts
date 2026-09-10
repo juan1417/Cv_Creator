@@ -34,6 +34,8 @@ import type {
   AddProgramRequest,
   LanguageResponse,
   AddLanguageRequest,
+  JobMatchResult,
+  CVAdaptationResult,
 } from "./types";
 
 const API_BASE =
@@ -234,10 +236,20 @@ export async function deleteSession(
 
 // ─── CV Analysis ─────────────────────────────────────────────────────────────
 
-export async function analyzeCV(userId: string): Promise<CVAnalysis> {
-  const params = new URLSearchParams({ user_id: userId });
-  // El análisis llama a la IA: le damos más margen que al resto (120s)
-  return request(`/api/chat/cv-analysis?${params}`, undefined, 120_000);
+export async function analyzeCV(
+  userId: string,
+  sections?: string[],
+): Promise<CVAnalysis> {
+  // Si sections es undefined → análisis completo
+  // Si sections es array (vacío o con items) → solo re-analizar esas secciones
+  const body = sections !== undefined ? JSON.stringify(sections) : undefined;
+  return request(
+    `/api/chat/cv-analysis?user_id=${userId}`,
+    body !== undefined
+      ? { method: "POST", body, headers: { "Content-Type": "application/json" } }
+      : { method: "POST" },
+    120_000,
+  );
 }
 
 // ─── CV Edit (Chat) ─────────────────────────────────────────────────────────
@@ -458,4 +470,39 @@ export async function deleteLanguage(
   return request(`/api/languages/${languageId}?${params}`, {
     method: "DELETE",
   });
+}
+
+// ─── Job Comparison & Adaptation ─────────────────────────────────────────────
+
+export async function compareCVJob(
+  userId: string,
+  jobDescription: string,
+): Promise<JobMatchResult> {
+  return request(
+    "/api/cv/compare-job",
+    {
+      method: "POST",
+      body: jsonBody({ user_id: userId, job_description: jobDescription }),
+    },
+    120_000,
+  );
+}
+
+export async function adaptCVForJob(
+  userId: string,
+  jobDescription: string,
+  missingSkills: Array<{ name: string; importance: string }>,
+): Promise<CVAdaptationResult> {
+  return request(
+    "/api/cv/adapt-job",
+    {
+      method: "POST",
+      body: jsonBody({
+        user_id: userId,
+        job_description: jobDescription,
+        missing_skills: missingSkills,
+      }),
+    },
+    120_000,
+  );
 }

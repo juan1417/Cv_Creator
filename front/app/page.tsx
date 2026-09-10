@@ -14,8 +14,11 @@ export default function Home() {
   }, [user, isLoading, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-      <div className="text-zinc-500 text-sm">Cargando...</div>
+    <div className="min-h-screen flex items-center justify-center bg-[#090D16]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent" />
+        <span className="text-sm text-zinc-500">Cargando...</span>
+      </div>
     </div>
   );
 }

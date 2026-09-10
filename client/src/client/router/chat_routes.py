@@ -241,11 +241,20 @@ async def delete_session(session_id: UUID, user_id: UUID):
         return {"message": "Sesion eliminada correctamente"}
 
 
-@router.get("/cv-analysis", response_model=CVAnalysis)
-async def cv_analysis(user_id: UUID):
+@router.post("/cv-analysis", response_model=CVAnalysis)
+async def cv_analysis(user_id: UUID, sections: list[str] | None = None):
+    """
+    Analiza el CV. Si se envía 'sections', solo re-analiza esas secciones
+    y usa cache para el resto.
+
+    Secciones válidas: personal, experience, education, skills, languages
+    """
     try:
-        # En thread para no bloquear el event loop mientras la IA responde
-        result = await asyncio.to_thread(analyze_cv, user_id)
+        valid_sections = {"personal", "experience", "education", "skills", "languages"}
+        if sections is not None:
+            sections = [s for s in sections if s in valid_sections]
+
+        result = await asyncio.to_thread(analyze_cv, user_id, sections)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

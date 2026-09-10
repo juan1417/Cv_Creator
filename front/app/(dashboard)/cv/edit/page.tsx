@@ -31,13 +31,14 @@ import type {
   LanguageResponse,
 } from "@/app/lib/types";
 import type { SkillCatalogItem } from "@/app/lib/api";
+import { markSectionDirty } from "@/app/lib/dirty-sections";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#6366F1] border-t-transparent" />
     </div>
   );
 }
@@ -58,10 +59,10 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
   return (
     <span className="ml-3 text-xs font-medium">
       {status === "saving" && (
-        <span className="text-zinc-400">Guardando...</span>
+        <span className="text-[#94A3B8]">Guardando...</span>
       )}
       {status === "saved" && (
-        <span className="text-green-600">Guardado</span>
+        <span className="text-[#10B981]">Guardado</span>
       )}
     </span>
   );
@@ -144,6 +145,7 @@ export default function CVEditPage() {
     value: string,
   ) => {
     setter(value);
+    markSectionDirty("personal");
     autoSavePersonal();
   };
 
@@ -152,10 +154,10 @@ export default function CVEditPage() {
   if (error && !cv) {
     return (
       <div className="flex flex-col items-center gap-4 py-20">
-        <p className="text-red-600">{error}</p>
+        <p className="text-[#EF4444]">{error}</p>
         <button
           onClick={fetchCV}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90"
         >
           Reintentar
         </button>
@@ -167,7 +169,7 @@ export default function CVEditPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
+          <h1 className="text-[28px] font-bold text-[#F8FAFC]">
             Editar CV
           </h1>
           <SaveIndicator status={saveStatus} />
@@ -175,7 +177,7 @@ export default function CVEditPage() {
         <a
           href="/cv/preview"
           target="_blank"
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-[#0F172A]"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -186,7 +188,7 @@ export default function CVEditPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-xl border border-[#EF4444]/20 bg-[#EF4444]/10 p-4 text-sm text-[#EF4444] backdrop-blur-sm">
           {error}
           <button onClick={() => setError(null)} className="ml-2 font-medium underline">
             Cerrar
@@ -195,8 +197,8 @@ export default function CVEditPage() {
       )}
 
       {/* ── Personal Info ─────────────────────────────────────────────── */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">
+      <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
+        <h2 className="mb-4 text-lg font-semibold text-[#F1F5F9]">
           Información Personal
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -208,14 +210,14 @@ export default function CVEditPage() {
           <Field label="LinkedIn" value={linkedin} onChange={(v) => handleChange(setLinkedin, v)} placeholder="https://linkedin.com/in/..." />
         </div>
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
             Sobre mí
           </label>
           <textarea
             value={about}
             onChange={(e) => handleChange(setAbout, e.target.value)}
             rows={4}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+            className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
           />
         </div>
       </section>
@@ -297,7 +299,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
         {label}
       </label>
       <input
@@ -305,7 +307,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+        className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
       />
     </div>
   );
@@ -375,6 +377,7 @@ function ExperiencesSection({
       }
       resetForm();
       onChanged();
+      markSectionDirty("experience");
     } catch {
       // error handled by parent refresh
     } finally {
@@ -384,25 +387,26 @@ function ExperiencesSection({
 
   const handleDelete = async (id: string) => {
     await deleteExperience(id, userId);
+    markSectionDirty("experience");
     onChanged();
   };
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-[#F1F5F9]">
           Experiencia
         </h2>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
         >
           + Agregar experiencia
         </button>
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Título" value={title} onChange={setTitle} />
             <Field label="Empresa" value={company} onChange={setCompany} />
@@ -410,21 +414,21 @@ function ExperiencesSection({
             <Field label="Fecha fin" value={endDate} onChange={setEndDate} type="date" />
           </div>
           <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
               Descripción
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
             />
           </div>
           <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600">
+            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
               Cancelar
             </button>
-            <button onClick={handleSave} disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
               {saving ? "Guardando..." : editId ? "Actualizar" : "Agregar"}
             </button>
           </div>
@@ -432,7 +436,7 @@ function ExperiencesSection({
       )}
 
       {experiences.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="py-8 text-center text-sm text-[#94A3B8]">
           No hay experiencias registradas.
         </p>
       )}
@@ -441,23 +445,23 @@ function ExperiencesSection({
         {experiences.map((exp) => (
           <div
             key={exp.id}
-            className="flex items-start justify-between rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex items-start justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
           >
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-zinc-900 dark:text-white">{exp.title}</p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">{exp.company}</p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+              <p className="font-medium text-[#F8FAFC]">{exp.title}</p>
+              <p className="text-sm text-[#94A3B8]">{exp.company}</p>
+              <p className="mt-1 text-xs text-[#64748B]">
                 {exp.start_date ?? "—"} — {exp.end_date ?? "Presente"}
               </p>
               {exp.description && (
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{exp.description}</p>
+                <p className="mt-2 text-sm text-[#94A3B8]">{exp.description}</p>
               )}
             </div>
             <div className="ml-4 flex gap-2">
-              <button onClick={() => openEdit(exp)} className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20">
+              <button onClick={() => openEdit(exp)} className="rounded px-2 py-1 text-xs font-medium text-[#6366F1] transition-all duration-200 hover:bg-[#6366F1]/10">
                 Editar
               </button>
-              <button onClick={() => handleDelete(exp.id)} className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+              <button onClick={() => handleDelete(exp.id)} className="rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
                 Eliminar
               </button>
             </div>
@@ -580,6 +584,7 @@ function SkillsSection({
       setQuery("");
       setLevel("Intermedio");
       setShowSuggestions(false);
+      markSectionDirty("skills");
       onChanged();
     } catch {
       // handled by parent
@@ -590,6 +595,7 @@ function SkillsSection({
 
   const handleDelete = async (id: string) => {
     await deleteSkill(id, userId);
+    markSectionDirty("skills");
     onChanged();
   };
 
@@ -599,17 +605,17 @@ function SkillsSection({
   );
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-[#F1F5F9]">
           {title}
         </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+        <p className="text-sm text-[#94A3B8]">{subtitle}</p>
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-2">
         <div className="flex-1 min-w-[200px] relative" ref={wrapperRef}>
-          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
             Nueva skill
           </label>
           <input
@@ -618,20 +624,20 @@ function SkillsSection({
             onKeyDown={handleKeyDown}
             onFocus={() => query.trim().length >= 1 && suggestions.length > 0 && setShowSuggestions(true)}
             placeholder={placeholder}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+            className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
           />
           {showSuggestions && filteredSuggestions.length > 0 && (
-            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-[#334155] bg-[#1E293B] shadow-2xl backdrop-blur-sm">
               {filteredSuggestions.map((item, idx) => (
                 <button
                   key={item.id}
                   onMouseDown={() => selectSuggestion(item)}
-                  className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
-                    idx === highlightIdx ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                  className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-all duration-150 hover:bg-[#6366F1]/10 ${
+                    idx === highlightIdx ? "bg-[#6366F1]/10" : ""
                   }`}
                 >
-                  <span className="text-zinc-900 dark:text-white">{item.name}</span>
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                  <span className="text-[#F8FAFC]">{item.name}</span>
+                  <span className="text-xs text-[#64748B]">
                     {item.category}
                   </span>
                 </button>
@@ -641,7 +647,7 @@ function SkillsSection({
               ) && query.trim().length > 0 && (
                 <button
                   onMouseDown={handleAdd}
-                  className="flex w-full items-center gap-2 border-t border-zinc-100 px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:border-zinc-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                  className="flex w-full items-center gap-2 border-t border-[#334155] px-4 py-2.5 text-left text-sm text-[#6366F1] transition-all duration-150 hover:bg-[#6366F1]/10"
                 >
                   <span>+</span>
                   <span>Crear &quot;{query.trim()}&quot;</span>
@@ -651,13 +657,13 @@ function SkillsSection({
           )}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
             Nivel
           </label>
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+            className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
           >
             {LEVELS.map((l) => (
               <option key={l} value={l}>{l}</option>
@@ -667,14 +673,14 @@ function SkillsSection({
         <button
           onClick={handleAdd}
           disabled={saving || !query.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40 disabled:opacity-50 disabled:shadow-none"
         >
           {saving ? "Agregando..." : "Agregar"}
         </button>
       </div>
 
       {typedSkills.length === 0 ? (
-        <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="py-8 text-center text-sm text-[#94A3B8]">
           No hay {title.toLowerCase()} registradas.
         </p>
       ) : (
@@ -682,13 +688,13 @@ function SkillsSection({
           {typedSkills.map((skill) => (
             <span
               key={skill.id}
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+              className="inline-flex items-center gap-2 rounded-full border border-[#334155] bg-[#0F172A] px-3 py-1.5 text-sm transition-all duration-200 hover:border-[#6366F1]/20"
             >
-              <span className="text-zinc-900 dark:text-white">{skill.name}</span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">{skill.level}</span>
+              <span className="text-[#F8FAFC]">{skill.name}</span>
+              <span className="text-xs text-[#64748B]">{skill.level}</span>
               <button
                 onClick={() => handleDelete(skill.id)}
-                className="ml-1 text-zinc-400 hover:text-red-600 dark:text-zinc-500 dark:hover:text-red-400"
+                className="ml-1 text-[#64748B] transition-all duration-200 hover:text-[#EF4444]"
               >
                 ×
               </button>
@@ -755,6 +761,7 @@ function EducationSection({
         description,
       });
       resetForm();
+      markSectionDirty("education");
       onChanged();
     } catch {
       // handled by parent
@@ -765,25 +772,26 @@ function EducationSection({
 
   const handleDelete = async (id: string) => {
     await deleteEducation(id, userId);
+    markSectionDirty("education");
     onChanged();
   };
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-[#F1F5F9]">
           Formación
         </h2>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
         >
           + Agregar formación
         </button>
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Título" value={degree} onChange={setDegree} />
             <Field label="Institución" value={institution} onChange={setInstitution} />
@@ -791,21 +799,21 @@ function EducationSection({
             <Field label="Fecha fin" value={endDate} onChange={setEndDate} type="date" />
           </div>
           <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
               Descripción
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
             />
           </div>
           <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600">
+            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
               Cancelar
             </button>
-            <button onClick={handleSave} disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
               {saving ? "Guardando..." : editId ? "Actualizar" : "Agregar"}
             </button>
           </div>
@@ -813,7 +821,7 @@ function EducationSection({
       )}
 
       {education.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="py-8 text-center text-sm text-[#94A3B8]">
           No hay formación registrada.
         </p>
       )}
@@ -822,23 +830,23 @@ function EducationSection({
         {education.map((edu) => (
           <div
             key={edu.id}
-            className="flex items-start justify-between rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex items-start justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
           >
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-zinc-900 dark:text-white">{edu.degree}</p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">{edu.institution}</p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+              <p className="font-medium text-[#F8FAFC]">{edu.degree}</p>
+              <p className="text-sm text-[#94A3B8]">{edu.institution}</p>
+              <p className="mt-1 text-xs text-[#64748B]">
                 {edu.start_date ?? "—"} — {edu.end_date ?? "Presente"}
               </p>
               {edu.description && (
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{edu.description}</p>
+                <p className="mt-2 text-sm text-[#94A3B8]">{edu.description}</p>
               )}
             </div>
             <div className="ml-4 flex gap-2">
-              <button onClick={() => openEdit(edu)} className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20">
+              <button onClick={() => openEdit(edu)} className="rounded px-2 py-1 text-xs font-medium text-[#6366F1] transition-all duration-200 hover:bg-[#6366F1]/10">
                 Editar
               </button>
-              <button onClick={() => handleDelete(edu.id)} className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+              <button onClick={() => handleDelete(edu.id)} className="rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
                 Eliminar
               </button>
             </div>
@@ -891,30 +899,30 @@ function AchievementsSection({
   };
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-[#F1F5F9]">
           Logros Destacados
         </h2>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
         >
           + Agregar logro
         </button>
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
           <div className="grid grid-cols-1 gap-4">
             <Field label="Título" value={title} onChange={setTitle} />
             <Field label="Descripción" value={description} onChange={setDescription} />
           </div>
           <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600">
+            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
               Cancelar
             </button>
-            <button onClick={handleSave} disabled={saving || !title.trim()} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving || !title.trim()} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
               {saving ? "Guardando..." : "Agregar"}
             </button>
           </div>
@@ -922,7 +930,7 @@ function AchievementsSection({
       )}
 
       {achievements.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="py-8 text-center text-sm text-[#94A3B8]">
           No hay logros registrados.
         </p>
       )}
@@ -931,15 +939,15 @@ function AchievementsSection({
         {achievements.map((ach) => (
           <div
             key={ach.id}
-            className="flex items-start justify-between rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex items-start justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
           >
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-zinc-900 dark:text-white">{ach.title}</p>
+              <p className="font-medium text-[#F8FAFC]">{ach.title}</p>
               {ach.description && (
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{ach.description}</p>
+                <p className="mt-1 text-sm text-[#94A3B8]">{ach.description}</p>
               )}
             </div>
-            <button onClick={() => handleDelete(ach.id)} className="ml-4 rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+            <button onClick={() => handleDelete(ach.id)} className="ml-4 rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
               Eliminar
             </button>
           </div>
@@ -990,17 +998,17 @@ function ProgramsSection({
   };
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-[#F1F5F9]">
           Programas
         </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Software, herramientas y plataformas que dominás</p>
+        <p className="text-sm text-[#94A3B8]">Software, herramientas y plataformas que dominás</p>
       </div>
 
       <div className="mb-4 flex items-end gap-2">
         <div className="flex-1 min-w-[200px]">
-          <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
             Nuevo programa
           </label>
           <input
@@ -1008,20 +1016,20 @@ function ProgramsSection({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ej: Power BI, MATLAB, Bloomberg..."
-            className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+            className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
           />
         </div>
         <button
           onClick={handleAdd}
           disabled={saving || !query.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40 disabled:opacity-50 disabled:shadow-none"
         >
           {saving ? "Agregando..." : "Agregar"}
         </button>
       </div>
 
       {programs.length === 0 ? (
-        <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="py-8 text-center text-sm text-[#94A3B8]">
           No hay programas registrados.
         </p>
       ) : (
@@ -1029,12 +1037,12 @@ function ProgramsSection({
           {programs.map((prog) => (
             <span
               key={prog.id}
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+              className="inline-flex items-center gap-2 rounded-full border border-[#334155] bg-[#0F172A] px-3 py-1.5 text-sm transition-all duration-200 hover:border-[#6366F1]/20"
             >
-              <span className="text-zinc-900 dark:text-white">{prog.name}</span>
+              <span className="text-[#F8FAFC]">{prog.name}</span>
               <button
                 onClick={() => handleDelete(prog.id)}
-                className="ml-1 text-zinc-400 hover:text-red-600 dark:text-zinc-500 dark:hover:text-red-400"
+                className="ml-1 text-[#64748B] transition-all duration-200 hover:text-[#EF4444]"
               >
                 ×
               </button>
@@ -1076,6 +1084,7 @@ function LanguagesSection({
     try {
       await addLanguage({ user_id: userId, name: name.trim(), level });
       resetForm();
+      markSectionDirty("languages");
       onChanged();
     } catch {
       // handled by parent
@@ -1086,35 +1095,36 @@ function LanguagesSection({
 
   const handleDelete = async (id: string) => {
     await deleteLanguage(id, userId);
+    markSectionDirty("languages");
     onChanged();
   };
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-[#F1F5F9]">
           Idiomas
         </h2>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
         >
           + Agregar idioma
         </button>
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Idioma" value={name} onChange={setName} placeholder="Ej: Español, Inglés..." />
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
                 Nivel
               </label>
               <select
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
               >
                 {LANGUAGE_LEVELS.map((l) => (
                   <option key={l} value={l}>{l}</option>
@@ -1123,10 +1133,10 @@ function LanguagesSection({
             </div>
           </div>
           <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600">
+            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
               Cancelar
             </button>
-            <button onClick={handleSave} disabled={saving || !name.trim()} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving || !name.trim()} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
               {saving ? "Guardando..." : "Agregar"}
             </button>
           </div>
@@ -1134,7 +1144,7 @@ function LanguagesSection({
       )}
 
       {languages.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="py-8 text-center text-sm text-[#94A3B8]">
           No hay idiomas registrados.
         </p>
       )}
@@ -1143,13 +1153,13 @@ function LanguagesSection({
         {languages.map((lang) => (
           <div
             key={lang.id}
-            className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex items-center justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
           >
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-zinc-900 dark:text-white">{lang.name}</p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">{lang.level}</p>
+              <p className="font-medium text-[#F8FAFC]">{lang.name}</p>
+              <p className="text-sm text-[#94A3B8]">{lang.level}</p>
             </div>
-            <button onClick={() => handleDelete(lang.id)} className="ml-4 rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+            <button onClick={() => handleDelete(lang.id)} className="ml-4 rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
               Eliminar
             </button>
           </div>

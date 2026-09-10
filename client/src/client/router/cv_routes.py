@@ -13,6 +13,7 @@ from models.education import Education
 from models.achievement import Achievement
 from models.program import Program
 from models.language import Language
+from IA_rag.job_matcher import compare_cv_job, adapt_cv_for_job
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
@@ -329,3 +330,41 @@ async def delete_cv(user_id: UUID):
         session.commit()
 
         return {"message": "CV y todos sus datos eliminados correctamente"}
+
+
+# ─── Job Comparison & Adaptation ──────────────────────────────────────────────
+
+
+class CompareJobRequest(BaseModel):
+    user_id: UUID
+    job_description: str
+
+
+class AdaptJobRequest(BaseModel):
+    user_id: UUID
+    job_description: str
+    missing_skills: list[dict] = []
+
+
+@router.post("/compare-job")
+async def compare_job(req: CompareJobRequest):
+    """Compara el CV del usuario con una descripción de puesto."""
+    try:
+        result = compare_cv_job(req.user_id, req.job_description)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al comparar: {str(e)}")
+
+
+@router.post("/adapt-job")
+async def adapt_job(req: AdaptJobRequest):
+    """Adapta el CV del usuario para un puesto específico."""
+    try:
+        result = adapt_cv_for_job(req.user_id, req.job_description, req.missing_skills)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al adaptar: {str(e)}")

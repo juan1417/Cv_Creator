@@ -19,25 +19,30 @@ export default function LoginPage() {
       await login(email, password);
       router.push("/dashboard");
     } catch {
-      setError("Credenciales invalidas. Intenta de nuevo.");
+      setError("Credenciales inválidas. Intentá de nuevo.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-50 via-white to-indigo-100 dark:from-zinc-950 dark:via-zinc-900 dark:to-indigo-950">
-      <div className="w-full max-w-md">
-        <div className="card p-8 shadow-xl backdrop-blur">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-[#090D16]">
+      {/* Subtle radial glow */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-indigo-600/8 blur-[120px]" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-2xl backdrop-blur-xl">
           <div className="text-center mb-8">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-lg font-bold text-white shadow-lg">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-lg font-bold text-white shadow-lg shadow-indigo-500/25">
               CV
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">CV Creator</h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Inicia sesion para continuar</p>
+            <h1 className="text-2xl font-bold tracking-tight text-white">CV Creator</h1>
+            <p className="text-sm text-zinc-400 mt-1">Iniciá sesión para continuar</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-1.5">
                 Email
               </label>
               <input
@@ -46,14 +51,14 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="input"
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white placeholder-zinc-500 transition-all duration-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="tu@email.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                Contrasena
+              <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-1.5">
+                Contraseña
               </label>
               <input
                 id="password"
@@ -61,25 +66,32 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="input"
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2.5 text-sm text-white placeholder-zinc-500 transition-all duration-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 placeholder="••••••••"
               />
             </div>
 
             {error && (
-              <div className="bg-red-50 text-red-700 text-sm px-4 py-2.5 rounded-lg dark:bg-red-900/20 dark:text-red-400">
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">
                 {error}
               </div>
             )}
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full">
-              {isLoading ? "Iniciando sesion..." : "Iniciar sesion"}
+            <button type="submit" disabled={isLoading} className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-indigo-500 hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed disabled:opacity-50">
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Iniciando sesión...
+                </span>
+              ) : (
+                "Iniciar sesión"
+              )}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-            No tienes cuenta?{" "}
-            <Link href="/register" className="text-blue-600 font-medium hover:text-blue-700 transition-colors dark:text-blue-400">
+          <p className="mt-6 text-center text-sm text-zinc-500">
+            No tenés cuenta?{" "}
+            <Link href="/register" className="text-indigo-400 font-medium hover:text-indigo-300 transition-colors">
               Registrate
             </Link>
           </p>

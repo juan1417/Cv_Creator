@@ -23,8 +23,8 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-        <div className="text-zinc-500 text-sm">Cargando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#090D16]">
+        <div className="text-[#94A3B8] text-sm">Cargando...</div>
       </div>
     );
   }
@@ -34,7 +34,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50" suppressHydrationWarning>
+      <div className="min-h-screen" suppressHydrationWarning>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="lg:ml-16">
         <div className="min-h-screen flex flex-col">
