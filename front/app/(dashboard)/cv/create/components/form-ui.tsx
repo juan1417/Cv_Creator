@@ -278,8 +278,41 @@ export function StepError({ message }: { message?: string }) {
   );
 }
 
-/** Navegación del paso: atrás, continuar o saltar (lo opcional). */
-export function StepActions({
+/** Lista de chips: skills, programas e idiomas. */
+export function ChipList({
+  items,
+  onDelete,
+  deleteLabel,
+}: {
+  items: { id: string; label: string; meta?: string }[];
+  onDelete: (id: string) => void;
+  deleteLabel?: (label: string) => string;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <span
+          key={item.id}
+          className="inline-flex items-center gap-2 rounded-full border border-[#334155] bg-[#0F172A] px-3 py-1.5 text-sm"
+        >
+          <span className="text-[#F8FAFC]">{item.label}</span>
+          {item.meta && <span className="text-xs text-[#64748B]">{item.meta}</span>}
+          <button
+            type="button"
+            onClick={() => onDelete(item.id)}
+            aria-label={deleteLabel ? deleteLabel(item.label) : "Quitar"}
+            className="-mr-1 text-[#64748B] transition-colors hover:text-[#EF4444]"
+          >
+            ×
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Navegación del paso: atrás, continuar o saltar (lo opcional). */export function StepActions({
   onBack,
   onNext,
   nextLabel = "Continuar",

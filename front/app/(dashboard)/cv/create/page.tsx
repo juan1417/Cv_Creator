@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth";
 import { getFullCV } from "@/app/lib/api";
 import type { FullCV } from "@/app/lib/types";
@@ -9,6 +10,9 @@ import { cvCompleteness, sectionProgress } from "@/app/lib/cv-validation";
 import { PersonalStep } from "./steps/personal";
 import { ExperienceStep } from "./steps/experience";
 import { EducationStep } from "./steps/education";
+import { SkillsStep } from "./steps/skills";
+import { ExtrasStep } from "./steps/extras";
+import { ReviewStep } from "./steps/review";
 
 /**
  * Asistente para crear el CV: un paso por pantalla, barra de progreso y
@@ -43,12 +47,28 @@ const STEPS: StepDefinition[] = [
     label: "Formación",
     isFilled: (cv) => cv.education.length > 0,
   },
+  {
+    key: "skills",
+    label: "Habilidades",
+    isFilled: (cv) => cv.skills.length > 0 || cv.programs.length > 0,
+  },
+  {
+    key: "extras",
+    label: "Logros e idiomas",
+    isFilled: (cv) => cv.achievements.length > 0 || cv.languages.length > 0,
+  },
+  {
+    key: "review",
+    label: "Revisar",
+    isFilled: (cv) => !!(cv.cv.name && cv.cv.email),
+  },
 ];
 
 const stepStorageKey = (userId: string) => `cv_wizard_step:${userId}`;
 
 export default function CreateCVWizardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [cv, setCv] = useState<FullCV | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +134,13 @@ export default function CreateCVWizardPage() {
     },
     [user],
   );
+
+  const handleFinish = useCallback(() => {
+    if (user) {
+      window.localStorage.removeItem(stepStorageKey(user.id));
+    }
+    router.push("/dashboard");
+  }, [router, user]);
 
   const progress = useMemo(
     () => (cv ? sectionProgress(cv) : null),
@@ -253,7 +280,35 @@ export default function CreateCVWizardPage() {
         {stepIdx === 2 && (
           <EducationStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(3)} />
         )}
+        {stepIdx === 3 && (
+          <SkillsStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(4)} />
+        )}
+        {stepIdx === 4 && (
+          <ExtrasStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(5)} />
+        )}
+        {stepIdx === 5 && (
+          <ReviewStep
+            userId={user.id}
+            cv={cv}
+            onChanged={refreshCV}
+            onAdvance={() => goTo(5)}
+            onFinish={handleFinish}
+          />
+        )}
       </section>
+
+      {/* ── Volver al paso anterior ─────────────────────────────────────── */}
+      {stepIdx > 0 && (
+        <div className="flex justify-start">
+          <button
+            type="button"
+            onClick={() => goTo(stepIdx - 1)}
+            className="text-sm text-[#94A3B8] underline-offset-2 transition-colors hover:text-[#F1F5F9] hover:underline"
+          >
+            ← Paso anterior
+          </button>
+        </div>
+      )}
     </div>
   );
 }
