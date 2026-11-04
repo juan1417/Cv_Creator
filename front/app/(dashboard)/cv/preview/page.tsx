@@ -121,7 +121,7 @@ export default function CVPreviewPage() {
 
           {data.name && (
             <h1
-              className="font-bold text-center mb-1"
+              className="font-bold text-center mb-1 uppercase"
               style={{ fontSize: SIZE.name, color: COLOR, fontFamily: FONT }}
             >
               {data.name}
@@ -133,7 +133,7 @@ export default function CVPreviewPage() {
               className="text-center mb-8"
               style={{ fontSize: SIZE.contact, color: COLOR, fontFamily: FONT, letterSpacing: "0.02em" }}
             >
-              {contactParts.join(" ● ")}
+              {contactParts.join(" • ")}
             </p>
           )}
 
@@ -179,12 +179,16 @@ export default function CVPreviewPage() {
                   <div className="flex justify-between items-baseline">
                     <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
                       {exp.company}
-                      {exp.title && <span className="italic font-normal"> — {exp.title}</span>}
                     </span>
                     <span style={{ fontSize: SIZE.date, color: COLOR, fontFamily: FONT, whiteSpace: "nowrap", marginLeft: "12px" }}>
                       {formatDateRange(exp.start_date, exp.end_date)}
                     </span>
                   </div>
+                  {exp.title && (
+                    <p className="italic" style={{ fontSize: SIZE.body, color: COLOR, fontFamily: FONT }}>
+                      {exp.title}
+                    </p>
+                  )}
                   {exp.description && (
                     <div className="mt-1">
                       {exp.description.split("\n").map((line, j) => (
@@ -203,7 +207,7 @@ export default function CVPreviewPage() {
           {skills.length > 0 && (
             <Section title="HABILIDADES">
               <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {skills.map((s) => s.name).join(" | ")}
+                {skills.map((s) => (s.level ? `${s.name} (${s.level})` : s.name)).join(", ")}
               </p>
             </Section>
           )}
@@ -224,7 +228,7 @@ export default function CVPreviewPage() {
           {programs.length > 0 && (
             <Section title="TECNOLOGÍAS">
               <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {programs.map((p) => p.name).join(" | ")}
+                {programs.map((p) => p.name).join(", ")}
               </p>
             </Section>
           )}
@@ -232,7 +236,7 @@ export default function CVPreviewPage() {
           {languages.length > 0 && (
             <Section title="IDIOMAS">
               <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {languages.map((l) => `${l.name} (${l.level})`).join(" | ")}
+                {languages.map((l) => (l.level ? `${l.name} (${l.level})` : l.name)).join(", ")}
               </p>
             </Section>
           )}

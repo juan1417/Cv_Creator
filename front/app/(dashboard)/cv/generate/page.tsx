@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/app/lib/auth";
-import { getFullCV } from "@/app/lib/api";
-import type { FullCV } from "@/app/lib/types";
+import { getFullCV, exportCV } from "@/app/lib/api";
+import type { ExportFormat, FullCV } from "@/app/lib/types";
 import Link from "next/link";
 
 export default function CVGeneratePage() {
@@ -11,6 +11,8 @@ export default function CVGeneratePage() {
   const [cv, setCv] = useState<FullCV | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<ExportFormat | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const fetchCV = useCallback(async () => {
     if (!user) return;
@@ -25,6 +27,21 @@ export default function CVGeneratePage() {
       setLoading(false);
     }
   }, [user]);
+
+  const handleExport = async (format: ExportFormat) => {
+    if (!user || downloading) return;
+    setDownloading(format);
+    setDownloadError(null);
+    try {
+      await exportCV({ user_id: user.id, format });
+    } catch (e) {
+      setDownloadError(
+        e instanceof Error ? e.message : "Error al generar el archivo",
+      );
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   useEffect(() => {
     fetchCV();
@@ -174,20 +191,26 @@ export default function CVGeneratePage() {
         </h2>
         <div className="flex gap-3">
           <button
-            disabled
-            className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-6 py-3 text-sm font-medium text-zinc-500 cursor-not-allowed"
+            onClick={() => handleExport("pdf")}
+            disabled={downloading !== null}
+            className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Generar PDF
+            {downloading === "pdf" ? "Generando..." : "Descargar PDF"}
           </button>
           <button
-            disabled
-            className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-6 py-3 text-sm font-medium text-zinc-500 cursor-not-allowed"
+            onClick={() => handleExport("docx")}
+            disabled={downloading !== null}
+            className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-6 py-3 text-sm font-medium text-zinc-200 transition-all hover:border-indigo-500/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Generar DOCX
+            {downloading === "docx" ? "Generando..." : "Descargar DOCX"}
           </button>
         </div>
+        {downloadError && (
+          <p className="mt-3 text-xs text-red-400">{downloadError}</p>
+        )}
         <p className="mt-3 text-xs text-zinc-500">
-          TODO: Implementar endpoint de generación en el backend (Prefect flow).
+          Formato Harvard, A4, una columna: legible por sistemas ATS. El archivo
+          se valida en el servidor antes de descargarse.
         </p>
       </section>
 

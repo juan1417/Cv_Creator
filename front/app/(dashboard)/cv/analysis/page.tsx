@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/app/lib/auth";
 import { analyzeCV } from "@/app/lib/api";
-import { getDirtySections, clearDirtySections } from "@/app/lib/dirty-sections";
 import type { CVAnalysis, MetricGroup } from "@/app/lib/types";
 import Link from "next/link";
 
@@ -14,25 +13,14 @@ export default function CVAnalysisPage() {
   const [analysis, setAnalysis] = useState<CVAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reanalyzedSections, setReanalyzedSections] = useState<string[]>([]);
 
   const fetchAnalysis = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     setError(null);
     try {
-      // Obtener secciones modificadas desde el editor
-      const dirty = getDirtySections();
-      // Si hay secciones dirty, solo re-analizar esas
-      // Si no hay, análisis completo (primera vez o todo limpio)
-      const sections = dirty.length > 0 ? dirty : undefined;
-      setReanalyzedSections(dirty);
-      const data = await analyzeCV(user.id, sections);
+      const data = await analyzeCV(user.id);
       setAnalysis(data);
-      // Limpiar dirty sections después del análisis exitoso
-      if (dirty.length > 0) {
-        clearDirtySections();
-      }
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Error al analizar el CV",
@@ -106,16 +94,9 @@ export default function CVAnalysisPage() {
         <h1 className="text-[28px] font-bold text-[#F8FAFC]">
           Análisis del CV
         </h1>
-        {reanalyzedSections.length > 0 && (
-          <span className="rounded-full bg-[#6366F1]/10 border border-[#6366F1]/20 px-3 py-1 text-xs font-medium text-[#6366F1]">
-            Re-analizado: {reanalyzedSections.join(", ")}
-          </span>
-        )}
-        {reanalyzedSections.length === 0 && analysis && (
-          <span className="rounded-full bg-[#10B981]/10 border border-[#10B981]/20 px-3 py-1 text-xs font-medium text-[#10B981]">
-            Desde cache
-          </span>
-        )}
+        <span className="rounded-full bg-[#10B981]/10 border border-[#10B981]/20 px-3 py-1 text-xs font-medium text-[#10B981]">
+          Puntaje determinista
+        </span>
       </div>
 
       {/* ── Overall Score ──────────────────────────────────────────────── */}

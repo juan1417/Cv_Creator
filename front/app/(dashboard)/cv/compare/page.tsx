@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useAuth } from "@/app/lib/auth";
-import { compareCVJob, adaptCVForJob } from "@/app/lib/api";
-import type { JobMatchResult, CVAdaptationResult } from "@/app/lib/types";
+import { compareCVJob, adaptCVForJob, exportCV, atsReport } from "@/app/lib/api";
+import type {
+  ATSMetricGroup,
+  CVAdaptationResult,
+  ExportFormat,
+  JobMatchResult,
+} from "@/app/lib/types";
 
 type Step = "input" | "results" | "adapted";
 
@@ -12,8 +17,10 @@ export default function ComparePage() {
   const [jobDescription, setJobDescription] = useState("");
   const [step, setStep] = useState<Step>("input");
   const [matchResult, setMatchResult] = useState<JobMatchResult | null>(null);
+  const [atsMetrics, setAtsMetrics] = useState<ATSMetricGroup | null>(null);
   const [adaptResult, setAdaptResult] = useState<CVAdaptationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState<ExportFormat | null>(null);
   const [error, setError] = useState("");
 
   // ── Compare ────────────────────────────────────────────────────────────
@@ -23,8 +30,12 @@ export default function ComparePage() {
     setLoading(true);
     setError("");
     try {
-      const result = await compareCVJob(user.id, jobDescription);
+      const [result, ats] = await Promise.all([
+        compareCVJob(user.id, jobDescription),
+        atsReport(user.id, jobDescription),
+      ]);
       setMatchResult(result);
+      setAtsMetrics(ats.ats);
       setStep("results");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -56,6 +67,28 @@ export default function ComparePage() {
       setError(`Error: ${msg}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── Download adapted ───────────────────────────────────────────────────
+
+  const handleDownloadAdapted = async (format: ExportFormat) => {
+    if (!user || !adaptResult || downloading) return;
+    setDownloading(format);
+    setError("");
+    try {
+      await exportCV({
+        user_id: user.id,
+        format,
+        adapted_about: adaptResult.adapted_about,
+        adapted_experiences: adaptResult.adapted_experiences,
+        adapted_skills: adaptResult.adapted_skills,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Error al descargar: ${msg}`);
+    } finally {
+      setDownloading(null);
     }
   };
 
@@ -252,10 +285,57 @@ export default function ComparePage() {
             </div>
           </div>
 
+          {/* ATS keyword coverage */}
+          {atsMetrics?.keyword_coverage && atsMetrics.keyword_coverage.job_description_provided && (
+            <div className="rounded-2xl border border-[#1E293B] bg-[#111827] p-5 shadow-xl backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-300">
+                  Cobertura de palabras clave (ATS determinista)
+                </h3>
+                <span className="text-sm font-bold text-white">
+                  {atsMetrics.score}/100
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                {atsMetrics.keyword_coverage.message}
+              </p>
+              {atsMetrics.keyword_coverage.matched.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-xs font-medium text-[#10B981]">Presentes</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {atsMetrics.keyword_coverage.matched.map((kw) => (
+                      <span
+                        key={kw}
+                        className="rounded-full border border-[#10B981]/20 bg-[#10B981]/10 px-2.5 py-0.5 text-xs font-medium text-[#10B981]"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {atsMetrics.keyword_coverage.missing.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-xs font-medium text-[#EF4444]">Faltantes</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {atsMetrics.keyword_coverage.missing.map((kw) => (
+                      <span
+                        key={kw}
+                        className="rounded-full border border-[#EF4444]/20 bg-[#EF4444]/10 px-2.5 py-0.5 text-xs font-medium text-[#EF4444]"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-between">
             <button
-              onClick={() => { setStep("input"); setMatchResult(null); }}
+              onClick={() => { setStep("input"); setMatchResult(null); setAtsMetrics(null); }}
               className="rounded-xl border border-[#1E293B] bg-slate-800/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-slate-800"
             >
               Volver
@@ -343,20 +423,40 @@ export default function ComparePage() {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               onClick={() => setStep("results")}
               className="rounded-xl border border-[#1E293B] bg-slate-800/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-slate-800"
             >
               ← Volver al análisis
             </button>
-            <button
-              onClick={() => { setStep("input"); setMatchResult(null); setAdaptResult(null); setJobDescription(""); }}
-              className="rounded-xl bg-[#6366F1] px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
-            >
-              Nuevo puesto
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => handleDownloadAdapted("pdf")}
+                disabled={downloading !== null}
+                className="rounded-xl bg-[#6366F1] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none"
+              >
+                {downloading === "pdf" ? "Generando..." : "Descargar PDF adaptado"}
+              </button>
+              <button
+                onClick={() => handleDownloadAdapted("docx")}
+                disabled={downloading !== null}
+                className="rounded-xl border border-[#6366F1]/30 bg-[#6366F1]/10 px-5 py-2.5 text-sm font-medium text-[#818CF8] transition-all duration-200 hover:bg-[#6366F1]/20 disabled:opacity-50"
+              >
+                {downloading === "docx" ? "Generando..." : "Descargar DOCX adaptado"}
+              </button>
+              <button
+                onClick={() => { setStep("input"); setMatchResult(null); setAtsMetrics(null); setAdaptResult(null); setJobDescription(""); }}
+                className="rounded-xl border border-[#1E293B] bg-slate-800/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-slate-800"
+              >
+                Nuevo puesto
+              </button>
+            </div>
           </div>
+          <p className="text-xs text-slate-500">
+            El archivo adaptado se descarga como <code>CV_&lt;nombre&gt;_adapted</code>;
+            tu CV base no se modifica.
+          </p>
         </div>
       )}
     </div>

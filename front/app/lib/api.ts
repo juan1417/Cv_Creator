@@ -36,6 +36,8 @@ import type {
   AddLanguageRequest,
   JobMatchResult,
   CVAdaptationResult,
+  ExportRequest,
+  ATSReportResponse,
 } from "./types";
 
 const API_BASE =
@@ -238,16 +240,74 @@ export async function deleteSession(
 
 export async function analyzeCV(
   userId: string,
-  sections?: string[],
+  jobDescription?: string,
 ): Promise<CVAnalysis> {
-  // Si sections es undefined → análisis completo
-  // Si sections es array (vacío o con items) → solo re-analizar esas secciones
-  const body = sections !== undefined ? JSON.stringify(sections) : undefined;
+  const trimmed = jobDescription?.trim();
+  const body = trimmed ? JSON.stringify({ job_description: trimmed }) : undefined;
   return request(
     `/api/chat/cv-analysis?user_id=${userId}`,
     body !== undefined
       ? { method: "POST", body, headers: { "Content-Type": "application/json" } }
       : { method: "POST" },
+    120_000,
+  );
+}
+
+// ─── CV Export & ATS Report ──────────────────────────────────────────────────
+
+function _downloadFilename(disposition: string | null, fallback: string): string {
+  if (!disposition) return fallback;
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+  return match?.[1] ?? fallback;
+}
+
+export async function exportCV(
+  req: ExportRequest,
+  timeoutMs = 120_000,
+): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/cv/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`API error ${res.status}: ${body}`);
+    }
+    const blob = await res.blob();
+    const filename = _downloadFilename(
+      res.headers.get("Content-Disposition"),
+      `CV.${req.format}`,
+    );
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function atsReport(
+  userId: string,
+  jobDescription?: string,
+): Promise<ATSReportResponse> {
+  return request(
+    "/api/cv/ats-report",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        user_id: userId,
+        job_description: jobDescription ?? null,
+      }),
+    },
     120_000,
   );
 }
@@ -396,17 +456,6 @@ export async function getSkillCatalogByCategory(): Promise<{
   categories: Record<string, SkillCatalogItem[]>;
 }> {
   return request("/api/skills-catalog/by-category");
-}
-
-export async function addCustomSkillCatalog(
-  name: string,
-  category?: string,
-): Promise<{ skill: SkillCatalogItem }> {
-  const params = new URLSearchParams({ name });
-  if (category) params.set("category", category);
-  return request(`/api/skills-catalog/custom?${params}`, {
-    method: "POST",
-  });
 }
 
 // ─── Achievements ────────────────────────────────────────────────────────────

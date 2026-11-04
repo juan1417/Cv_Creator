@@ -13,7 +13,6 @@ import {
   addEducation,
   deleteEducation,
   searchSkillCatalog,
-  addCustomSkillCatalog,
   addAchievement,
   deleteAchievement,
   addProgram,
@@ -31,7 +30,6 @@ import type {
   LanguageResponse,
 } from "@/app/lib/types";
 import type { SkillCatalogItem } from "@/app/lib/api";
-import { markSectionDirty } from "@/app/lib/dirty-sections";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -145,7 +143,6 @@ export default function CVEditPage() {
     value: string,
   ) => {
     setter(value);
-    markSectionDirty("personal");
     autoSavePersonal();
   };
 
@@ -377,7 +374,6 @@ function ExperiencesSection({
       }
       resetForm();
       onChanged();
-      markSectionDirty("experience");
     } catch {
       // error handled by parent refresh
     } finally {
@@ -387,7 +383,6 @@ function ExperiencesSection({
 
   const handleDelete = async (id: string) => {
     await deleteExperience(id, userId);
-    markSectionDirty("experience");
     onChanged();
   };
 
@@ -584,7 +579,6 @@ function SkillsSection({
       setQuery("");
       setLevel("Intermedio");
       setShowSuggestions(false);
-      markSectionDirty("skills");
       onChanged();
     } catch {
       // handled by parent
@@ -595,7 +589,6 @@ function SkillsSection({
 
   const handleDelete = async (id: string) => {
     await deleteSkill(id, userId);
-    markSectionDirty("skills");
     onChanged();
   };
 
@@ -761,7 +754,6 @@ function EducationSection({
         description,
       });
       resetForm();
-      markSectionDirty("education");
       onChanged();
     } catch {
       // handled by parent
@@ -772,7 +764,6 @@ function EducationSection({
 
   const handleDelete = async (id: string) => {
     await deleteEducation(id, userId);
-    markSectionDirty("education");
     onChanged();
   };
 
@@ -1084,7 +1075,6 @@ function LanguagesSection({
     try {
       await addLanguage({ user_id: userId, name: name.trim(), level });
       resetForm();
-      markSectionDirty("languages");
       onChanged();
     } catch {
       // handled by parent
@@ -1095,7 +1085,6 @@ function LanguagesSection({
 
   const handleDelete = async (id: string) => {
     await deleteLanguage(id, userId);
-    markSectionDirty("languages");
     onChanged();
   };
 
