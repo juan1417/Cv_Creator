@@ -2,6 +2,18 @@
 
 import type { ReactNode } from "react";
 
+import type { FullCV } from "@/app/lib/types";
+
+/** Contrato común de los seis pasos del asistente. */
+export interface StepProps {
+  userId: string;
+  cv: FullCV;
+  /** Refresco silencioso tras una mutación (sin spinner, sin desmontar). */
+  onChanged: () => void;
+  /** Avanza al paso siguiente. */
+  onAdvance: () => void;
+}
+
 /**
  * Primitivas compartidas del asistente de creación.
  *
