@@ -16,14 +16,14 @@ Branch: `feat/ats-harvard-export` · Delivery: single PR (feature branch) · Tes
 
 | ID | Specs | Route | Status | Commit |
 |----|-------|-------|--------|--------|
-| T1 | S1,S2,S4,S6 | inline | pending | — |
-| T2 | S1,S5 | inline | pending | — |
-| T3 | S3,S4,S7 | inline | pending | — |
-| T4 | S4,S6,S7 | inline | pending | — |
-| T5 | S1,S2,S4 | inline | pending | — |
-| T6 | S4,S5,S6 | inline | pending | — |
-| T7 | S1,S2,S3 | inline | pending | — |
-| T8 | — | inline | pending | — |
+| T1 | S1,S2,S4,S6 | inline | done | 8fb3ce9 |
+| T2 | S1,S5 | inline | done | f9c45a8 |
+| T3 | S3,S4,S7 | inline | done | 8fb3ce9 |
+| T4 | S4,S6,S7 | inline | done | 8fb3ce9, 84dea3f |
+| T5 | S1,S2,S4 | inline | done | 84dea3f |
+| T6 | S4,S5,S6 | inline | done | ab3a183 |
+| T7 | S1,S2,S3 | inline | done | f9c45a8, 8fb3ce9, 84dea3f |
+| T8 | — | inline | done | 8fb3ce9, 3983f2d, ab3a183 |
 
 - **T1** — Modelo único de exportación: `CvData` con `skills: list[Skill]`, `from_db()`, y `get_user_cv_data()` completo (achievements, programs, languages, skill.type).
 - **T2** — Motor ATS determinista: `metrics/keywords.py` + reescritura de `metrics/ats.py`, `KeywordCoverage` en `models/cv_analysis.py`, cableado en `cv_analyzer`.
@@ -44,3 +44,9 @@ Branch: `feat/ats-harvard-export` · Delivery: single PR (feature branch) · Tes
 - **L6 (2026-11-04, decisión):** `metrics/content.py`, `metrics/structure.py` y `metrics/completeness.py` estaban muertos; se cablean en `cv_analyzer` para que las cuatro métricas sean deterministas y el LLM quede solo para resumen y sugerencias cualitativas.
 - **L7 (2026-11-04, decisión):** la validación de exportación se hace leyendo el archivo generado (DOCX con `python-docx`, PDF con `pypdf`), no confiando en el renderer. `pypdf` pasa a dependencia de runtime.
 - **L8 (2026-11-04, evidencia):** `plantilla.docx` ya era A4 (11906×16838 twips), márgenes 720 twips, sin tablas ni imágenes; los renderers nuevos generan el documento por código y no dependen de la plantilla binaria.
+- **L9 (2026-11-04, decisión):** sin descripción de la vacante no se puede medir la cobertura de keywords, así que el bloque de keywords queda "sin medir" y el score ATS se normaliza sobre los 75 puntos aplicables, en vez de castigar al candidato por un dato que no aportó.
+- **L10 (2026-11-04, decisión):** el endpoint `POST /api/chat/cv-analysis` deja de aceptar `sections` (el cache por sección murió con las métricas deterministas) y recibe `{ "job_description": ... }`; el tracker `dirty-sections.ts` y `addCustomSkillCatalog` pasan a ser código muerto y se borran.
+- **L11 (2026-11-04, decisión):** `apply_adaptation` trabaja sobre una copia profunda del `CvData` y solo reemplaza skills si la lista adaptada trae al menos un nombre válido: una respuesta vacía del LLM no debe vaciar las habilidades del CV base (defecto encontrado por `test_apply_adaptation_ignores_empty_entries`).
+- **L12 (2026-11-04, evidencia):** `cd client && uv run pytest` → 29 passed (keywords, motor ATS, renderers DOCX/PDF, validación, rutas de export). `cd front && npm run lint` → 0 errores (3 warnings preexistentes); `npx tsc --noEmit` → 0 errores. `format_date("2019", None)` devuelve `2019 - Presente` (corregido el test, no el código).
+- **L13 (2026-11-04, evidencia/restricción):** el rango se verificó con `FastAPI TestClient` (HTTP real sobre `/api/cv/export` y `/api/cv/ats-report` con datos fixture, validación post-generación incluida). No se pudo levantar el servidor contra Neon ni llamar a OpenRouter: no hay `.env` ni `DATABASE_URL`/`OPENROUTER_API` en este entorno. Falta una request viva con datos reales antes de afirmar el comportamiento en producción.
+- **L14 (2026-11-04, RDD):** `gentle-ai review mode status` → on (global). `gentle-ai review assess --base-ref e1e3452 --committed-only --untracked-scope=exclude` → risk `medium`, `review_due: false` (`under_budget`): el candidato queda pendiente en el slice hasta que alcance el presupuesto. El inventario de no-trackeados (`.atl/`, `AGENTS.md`) quedó excluido del alcance porque no forma parte del cambio.
