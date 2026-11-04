@@ -217,8 +217,13 @@ puntajes: solo redactá un resumen y mejoras concretas.
             kwargs = {
                 "model": model,
                 "temperature": 0.2,
-                "max_tokens": 700,
-                "max_retries": 1,
+                # Los modelos gratuitos razonan antes de responder y los
+                # prompts largos se truncan: 4000 deja margen para el JSON
+                # completo. Un solo intento por modo acota la latencia peor
+                # caso a dos requests; si falla, el resumen determinista
+                # (abajo) responde igual.
+                "max_tokens": 4000,
+                "max_retries": 0,
             }
             if use_json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
