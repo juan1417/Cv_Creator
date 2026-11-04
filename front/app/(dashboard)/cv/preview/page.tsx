@@ -207,7 +207,7 @@ export default function CVPreviewPage() {
           {skills.length > 0 && (
             <Section title="HABILIDADES">
               <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {skills.map((s) => (s.level ? `${s.name} (${s.level})` : s.name)).join(", ")}
+                {skills.map((s) => s.name).join(", ")}
               </p>
             </Section>
           )}

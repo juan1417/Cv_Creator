@@ -158,13 +158,7 @@ def _contact_line(cv: CvData) -> str:
 def _skills_line(cv: CvData) -> str:
     ordered = [s for s in cv.skills if (s.type or "tech") != "soft"]
     ordered += [s for s in cv.skills if (s.type or "tech") == "soft"]
-    chunks = []
-    for skill in ordered:
-        name = skill.name.strip()
-        if not name:
-            continue
-        level = skill.level.strip()
-        chunks.append(f"{name} ({level})" if level else name)
+    chunks = [skill.name.strip() for skill in ordered if skill.name.strip()]
     return ", ".join(chunks)
 
 

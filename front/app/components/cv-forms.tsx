@@ -21,7 +21,7 @@ import {
   updateExperience,
   type SkillCatalogItem,
 } from "@/app/lib/api";
-import { LANGUAGE_LEVELS, SKILL_LEVELS } from "@/app/lib/cv-constants";
+import { LANGUAGE_LEVELS } from "@/app/lib/cv-constants";
 import {
   hasErrors,
   toDateInput,
@@ -956,7 +956,6 @@ export function SkillPicker({
   type,
 }: SkillPickerProps) {
   const [query, setQuery] = useState("");
-  const [level, setLevel] = useState(SKILL_LEVELS[1]);
   const [error, setError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
   const [catalog, setCatalog] = useState<SkillCatalogItem[] | null>(null);
@@ -998,7 +997,7 @@ export function SkillPicker({
     const optimistic: SkillResponse = {
       id: `optimistic-${candidate}`,
       name: candidate,
-      level,
+      level: "",
       type,
     };
     onLocal?.((current) => ({ ...current, skills: [...current.skills, optimistic] }));
@@ -1006,7 +1005,7 @@ export function SkillPicker({
     setSaving(true);
     setError(undefined);
     try {
-      const created = await addSkill({ user_id: userId, name: candidate, level, type });
+      const created = await addSkill({ user_id: userId, name: candidate, level: "", type });
       onLocal?.((current) => ({
         ...current,
         skills: current.skills.map((item) =>
@@ -1078,14 +1077,6 @@ export function SkillPicker({
             </ul>
           )}
         </div>
-        <div className="sm:w-44">
-          <SelectField
-            label="Nivel"
-            value={level}
-            onChange={setLevel}
-            options={SKILL_LEVELS}
-          />
-        </div>
         <div className="flex items-end sm:pb-0.5">
           <button
             type="button"
@@ -1112,7 +1103,6 @@ export function SkillPicker({
             items={skills.map((skill) => ({
               id: skill.id,
               label: skill.name,
-              meta: skill.level,
             }))}
             onDelete={handleDelete}
             deleteLabel={(label) => `Quitar ${label}`}

@@ -150,7 +150,7 @@ export default function CVGeneratePage() {
                     key={skill.id}
                     className="rounded-full border border-zinc-700 bg-zinc-800/60 px-3 py-1 text-sm text-zinc-300"
                   >
-                    {skill.name} <span className="text-zinc-500">· {skill.level}</span>
+                    {skill.name}
                   </span>
                 ))}
               </div>
