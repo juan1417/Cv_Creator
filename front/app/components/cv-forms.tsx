@@ -187,11 +187,13 @@ export function PersonalFields({
   onChange,
   errors,
   disabled,
+  onBlur,
 }: {
   value: PersonalValues;
   onChange: (key: keyof PersonalValues, value: string) => void;
   errors?: FieldErrors;
   disabled?: boolean;
+  onBlur?: () => void;
 }) {
   return (
     <>
@@ -203,6 +205,7 @@ export function PersonalFields({
           placeholder="Ana Pérez"
           required
           disabled={disabled}
+          onBlur={onBlur}
           error={errors?.name}
         />
         <TextField
@@ -213,6 +216,7 @@ export function PersonalFields({
           placeholder="ana@ejemplo.com"
           required
           disabled={disabled}
+          onBlur={onBlur}
           error={errors?.email}
         />
         <TextField
@@ -222,6 +226,7 @@ export function PersonalFields({
           type="tel"
           placeholder="+54 11 5555-1234"
           disabled={disabled}
+          onBlur={onBlur}
           error={errors?.phone}
         />
         <TextField
@@ -230,6 +235,7 @@ export function PersonalFields({
           onChange={(v) => onChange("address", v)}
           placeholder="Ciudad, país"
           disabled={disabled}
+          onBlur={onBlur}
           error={errors?.address}
         />
         <TextField
@@ -238,6 +244,7 @@ export function PersonalFields({
           onChange={(v) => onChange("porfolio", v)}
           placeholder="https://..."
           disabled={disabled}
+          onBlur={onBlur}
           error={errors?.porfolio}
         />
         <TextField
@@ -246,6 +253,7 @@ export function PersonalFields({
           onChange={(v) => onChange("linkedin", v)}
           placeholder="https://linkedin.com/in/..."
           disabled={disabled}
+          onBlur={onBlur}
           error={errors?.linkedin}
         />
       </div>
@@ -258,6 +266,7 @@ export function PersonalFields({
           hint={`${value.about.trim().length}/300 caracteres recomendados`}
           placeholder="Dos o tres frases: quién sos, qué hacés y hacia dónde apuntás."
           disabled={disabled}
+          onBlur={onBlur}
           error={errors?.about}
         />
       </div>

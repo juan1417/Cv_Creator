@@ -70,6 +70,7 @@ export function TextField({
   required,
   autoFocus,
   disabled,
+  onBlur,
 }: CommonFieldProps & {
   value: string;
   onChange: (value: string) => void;
@@ -77,6 +78,7 @@ export function TextField({
   placeholder?: string;
   autoFocus?: boolean;
   disabled?: boolean;
+  onBlur?: () => void;
 }) {
   return (
     <div>
@@ -89,6 +91,7 @@ export function TextField({
         required={required}
         autoFocus={autoFocus}
         disabled={disabled}
+        onBlur={onBlur}
         aria-invalid={error ? true : undefined}
         className={INPUT_BASE}
       />
@@ -107,12 +110,14 @@ export function TextAreaField({
   hint,
   required,
   disabled,
+  onBlur,
 }: CommonFieldProps & {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   rows?: number;
   disabled?: boolean;
+  onBlur?: () => void;
 }) {
   return (
     <div>
@@ -124,6 +129,7 @@ export function TextAreaField({
         rows={rows}
         required={required}
         disabled={disabled}
+        onBlur={onBlur}
         aria-invalid={error ? true : undefined}
         className={`${INPUT_BASE} resize-y`}
       />

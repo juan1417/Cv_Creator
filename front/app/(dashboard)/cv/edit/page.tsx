@@ -29,11 +29,34 @@ function Spinner() {
 
 function useDebounce(fn: () => void, ms: number) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const latest = useRef(fn);
+
+  // El timer siempre ejecuta la versión más nueva de `fn`: si cerrara sobre la
+  // función de la tecla que lo programó, se guardaría el valor anterior a la
+  // última tecla tipeada.
+  useEffect(() => {
+    latest.current = fn;
+  });
+
+  // Al desmontar, lo que quedó pendiente se envía en vez de descartarse:
+  // salir antes de los `ms` milisegundos no pierde la última edición.
+  useEffect(() => {
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+        latest.current();
+      }
+    };
+  }, []);
+
   return useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => fn(), ms);
-  }, [fn, ms]);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      latest.current();
+    }, ms);
+  }, [ms]);
 }
 
 type SaveStatus = "idle" | "saving" | "saved";
@@ -60,6 +83,7 @@ export default function CVEditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [dirty, setDirty] = useState(false);
 
   // Personal info form
   const [name, setName] = useState("");
@@ -126,7 +150,7 @@ export default function CVEditPage() {
   // ── Auto-save personal info ──────────────────────────────────────────
 
   const doSavePersonal = useCallback(async () => {
-    if (!user || !initialized.current) return;
+    if (!user || !initialized.current || !dirty) return;
     setSaveStatus("saving");
     try {
       const updated = await updateCV(user.id, {
@@ -139,20 +163,23 @@ export default function CVEditPage() {
         linkedin,
       });
       setCv((prev) => (prev ? { ...prev, cv: updated } : prev));
+      setDirty(false);
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (e) {
       setSaveStatus("idle");
       setError(apiErrorMessage(e, "No se pudieron guardar tus datos"));
     }
-  }, [user, name, email, phone, address, about, porfolio, linkedin]);
+  }, [user, dirty, name, email, phone, address, about, porfolio, linkedin]);
 
   const autoSavePersonal = useDebounce(doSavePersonal, 1000);
+
 
   const handleChange = <T extends React.Dispatch<React.SetStateAction<string>>>(
     setter: T,
     value: string,
   ) => {
+    setDirty(true);
     setter(value);
     autoSavePersonal();
   };
@@ -225,6 +252,9 @@ export default function CVEditPage() {
         <PersonalFields
           value={{ name, email, phone, address, about, porfolio, linkedin }}
           onChange={(key, value) => handleChange(personalSetters[key], value)}
+          onBlur={() => {
+            if (dirty) void doSavePersonal();
+          }}
         />
       </section>
 
