@@ -7,9 +7,9 @@ import { exportCV } from "@/app/lib/api";
 import { cvCompleteness, sectionProgress } from "@/app/lib/cv-validation";
 import {
   StepActions,
-  StepError,
+  FormError,
   type StepProps,
-} from "../components/form-ui";
+} from "@/app/components/cv-form-ui";
 
 type ExportFormat = "pdf" | "docx";
 
@@ -132,7 +132,7 @@ export function ReviewStep({ userId, cv, onFinish }: ReviewStepProps) {
           </Link>
         </div>
         <div className="mt-3 flex items-center gap-3">
-          <StepError message={error} />
+          <FormError message={error} />
           {notice && <p className="text-xs text-[#10B981]">{notice}</p>}
         </div>
       </div>

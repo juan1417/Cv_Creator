@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { FullCV } from "@/app/lib/types";
 
@@ -253,23 +253,15 @@ export function ItemCard({
               Editar
             </button>
           )}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-colors hover:bg-[#EF4444]/10"
-            >
-              Borrar
-            </button>
-          )}
+          {onDelete && <ConfirmDeleteButton onConfirm={onDelete} />}
         </div>
       </div>
     </div>
   );
 }
 
-/** Error general del paso (fallo de red, por ejemplo). */
-export function StepError({ message }: { message?: string }) {
+/** Error general de un formulario o de un paso (fallo de red, por ejemplo). */
+export function FormError({ message }: { message?: string }) {
   if (!message) return null;
   return (
     <div className="rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/10 px-4 py-2.5 text-sm text-[#EF4444]">
@@ -309,6 +301,58 @@ export function ChipList({
         </span>
       ))}
     </div>
+  );
+}
+
+/** Borrado en dos pasos: un clic nunca borra sin confirmar. */
+export function ConfirmDeleteButton({
+  onConfirm,
+  label = "Borrar",
+  confirmLabel = "¿Seguro?",
+  disabled,
+}: {
+  onConfirm: () => void;
+  label?: string;
+  confirmLabel?: string;
+  disabled?: boolean;
+}) {
+  const [armed, setArmed] = useState(false);
+
+  if (!armed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setArmed(true)}
+        disabled={disabled}
+        className="rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-colors hover:bg-[#EF4444]/10 disabled:opacity-50"
+      >
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-1 text-xs">
+      <span className="text-[#94A3B8]">{confirmLabel}</span>
+      <button
+        type="button"
+        onClick={() => {
+          setArmed(false);
+          onConfirm();
+        }}
+        disabled={disabled}
+        className="rounded bg-[#EF4444] px-2 py-1 font-medium text-white transition-colors hover:bg-[#EF4444]/80 disabled:opacity-50"
+      >
+        Borrar
+      </button>
+      <button
+        type="button"
+        onClick={() => setArmed(false)}
+        className="rounded px-2 py-1 font-medium text-[#94A3B8] transition-colors hover:text-[#F1F5F9]"
+      >
+        No
+      </button>
+    </span>
   );
 }
 
