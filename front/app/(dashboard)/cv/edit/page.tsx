@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/app/lib/auth";
+import Link from "next/link";
 import {
   apiErrorMessage,
   isNotFoundError,
@@ -32,6 +33,7 @@ import type {
   LanguageResponse,
 } from "@/app/lib/types";
 import type { SkillCatalogItem } from "@/app/lib/api";
+import { LANGUAGE_LEVELS, SKILL_LEVELS } from "@/app/lib/cv-constants";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -187,17 +189,25 @@ export default function CVEditPage() {
           </h1>
           <SaveIndicator status={saveStatus} />
         </div>
-        <a
-          href="/cv/preview"
-          target="_blank"
-          className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-[#0F172A]"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-          Vista Previa
-        </a>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/cv/create"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-[#0F172A]"
+          >
+            Crear con el asistente
+          </Link>
+          <a
+            href="/cv/preview"
+            target="_blank"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-[#0F172A]"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Vista Previa
+          </a>
+        </div>
       </div>
 
       {error && (
@@ -512,7 +522,7 @@ function ExperiencesSection({
 
 // ─── Skills Section (with catalog search) ────────────────────────────────────
 
-const LEVELS = ["Básico", "Intermedio", "Avanzado", "Experto"];
+// Los niveles viven en cv-constants.ts (compartido con el asistente).
 
 function SkillsSection({
   title,
@@ -716,7 +726,7 @@ function SkillsSection({
             onChange={(e) => setLevel(e.target.value)}
             className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
           >
-            {LEVELS.map((l) => (
+            {SKILL_LEVELS.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
@@ -1150,7 +1160,7 @@ function ProgramsSection({
 
 // ─── Languages Section ───────────────────────────────────────────────────────
 
-const LANGUAGE_LEVELS = ["Nativo", "Avanzado (C1)", "Intermedio (B1)", "Básico (A2)", "Principiante (A1)"];
+// Los niveles de idioma viven en cv-constants.ts.
 
 function LanguagesSection({
   languages,
