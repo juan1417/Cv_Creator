@@ -4,9 +4,15 @@ from typing import List
 
 from prefect import flow, task
 
-from .cv_models import CvData, Experience, Education, Achievement, Language
-from .docx_creator import create_docx
-from .pdf_creator import create_pdf
+from .cv_models import Achievement, CvData, Education, Experience, Language
+from .harvard import render_docx, render_pdf
+
+
+def _safe_filename(name: str) -> str:
+    cleaned = "".join(
+        char if char.isalnum() or char in ("-", "_") else "_" for char in name.strip()
+    )
+    return cleaned or "cv"
 
 
 @task
@@ -15,23 +21,25 @@ def validate_cv_data(cv_data: CvData) -> CvData:
         raise ValueError("El campo 'name' es obligatorio")
     if not cv_data.email or not cv_data.email.strip():
         raise ValueError("El campo 'email' es obligatorio")
-    if not cv_data.phone or not cv_data.phone.strip():
-        raise ValueError("El campo 'phone' es obligatorio")
-    if not cv_data.address or not cv_data.address.strip():
-        raise ValueError("El campo 'address' es obligatorio")
-    if not cv_data.about or not cv_data.about.strip():
-        raise ValueError("El campo 'about' es obligatorio")
     return cv_data
 
 
 @task
 def create_cv_docx(cv_data: CvData, output_dir: str = "output") -> Path:
-    return create_docx(cv_data, output_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    file_path = output_path / f"{_safe_filename(cv_data.name)}_cv.docx"
+    file_path.write_bytes(render_docx(cv_data))
+    return file_path
 
 
 @task
 def create_cv_pdf(cv_data: CvData, output_dir: str = "output") -> Path:
-    return create_pdf(cv_data, output_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    file_path = output_path / f"{_safe_filename(cv_data.name)}_cv.pdf"
+    file_path.write_bytes(render_pdf(cv_data))
+    return file_path
 
 
 @flow(name="generate-cvs", log_prints=True)
@@ -103,7 +111,7 @@ def load_cv_from_json(json_path: str) -> CvData:
         skills=data.get("skills", []),
         education=education,
         linkedin=data.get("linkedin", ""),
-        portfolio=data.get("portfolio", ""),
+        portfolio=data.get("portfolio", data.get("porfolio", "")),
         achievements=achievements,
         programs=data.get("programs", []),
         languages=languages,
@@ -118,5 +126,3 @@ if __name__ == "__main__":
         print("Archivos generados:")
         for r in results:
             print(f"  {r}")
-    else:
-        print(f"No se encontro {example_path}")

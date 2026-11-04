@@ -1,14 +1,22 @@
 from uuid import UUID
 from sqlmodel import Session, select
 from .DB import get_engine
+from models.achievement import Achievement
 from models.cv import CV
 from models.experience import Experience
+from models.language import Language
+from models.program import Program
 from models.skill import Skills
 from models.education import Education
 
 
 def get_user_cv_data(user_id: UUID) -> dict | None:
-    """Obtiene todos los datos del CV de un usuario (CV, experiencias, skills, educación)."""
+    """Obtiene todos los datos del CV de un usuario.
+
+    Devuelve el CV completo (datos personales, experiencia, skills con su tipo,
+    educación, logros, programas e idiomas). Es la única fuente de datos que
+    consumen el análisis ATS y la exportación, para que ambos midan lo mismo.
+    """
     engine = get_engine()
     with Session(engine) as session:
         cv = session.exec(
@@ -34,6 +42,18 @@ def get_user_cv_data(user_id: UUID) -> dict | None:
             .order_by(Education.start_date.desc())
         ).all())
 
+        achievements = list(session.exec(
+            select(Achievement).where(Achievement.idUser == user_id)
+        ).all())
+
+        programs = list(session.exec(
+            select(Program).where(Program.idUser == user_id)
+        ).all())
+
+        languages = list(session.exec(
+            select(Language).where(Language.idUser == user_id)
+        ).all())
+
         return {
             "cv": {
                 "name": cv.name or "",
@@ -55,7 +75,7 @@ def get_user_cv_data(user_id: UUID) -> dict | None:
                 for e in experiences
             ],
             "skills": [
-                {"name": s.name or "", "level": s.level or ""}
+                {"name": s.name or "", "level": s.level or "", "type": s.type or "tech"}
                 for s in skills
             ],
             "education": [
@@ -67,6 +87,15 @@ def get_user_cv_data(user_id: UUID) -> dict | None:
                     "description": ed.description or "",
                 }
                 for ed in education
+            ],
+            "achievements": [
+                {"title": a.title or "", "description": a.description or ""}
+                for a in achievements
+            ],
+            "programs": [{"name": p.name or ""} for p in programs],
+            "languages": [
+                {"name": lang.name or "", "level": lang.level or ""}
+                for lang in languages
             ],
         }
 
@@ -115,5 +144,22 @@ def get_user_cv_formatted(user_id: UUID) -> str:
             if ed["description"]:
                 lines.append(f"Descripción: {ed['description']}")
             lines.append("")
+
+    if cv_data["achievements"]:
+        lines.append("=== LOGROS DESTACADOS ===")
+        for ach in cv_data["achievements"]:
+            lines.append(f"- {ach['title']}: {ach['description']}")
+        lines.append("")
+
+    if cv_data["programs"]:
+        lines.append("=== TECNOLOGÍAS ===")
+        lines.append(", ".join(p["name"] for p in cv_data["programs"]))
+        lines.append("")
+
+    if cv_data["languages"]:
+        lines.append("=== IDIOMAS ===")
+        for lang in cv_data["languages"]:
+            lines.append(f"- {lang['name']} ({lang['level']})")
+        lines.append("")
 
     return "\n".join(lines)
