@@ -52,3 +52,14 @@ def test_cv_analysis_rejects_legacy_sections_array(client):
         json=["experience", "skills"],
     )
     assert response.status_code == 422
+
+
+def test_cv_analysis_rejects_unknown_body_fields(client):
+    """Tampoco se acepta el nombre viejo dentro de un objeto: un campo
+    desconocido no puede quedar ignorado con éxito."""
+    response = client.post(
+        f"/api/chat/cv-analysis?user_id={uuid4()}",
+        json={"sections": ["experience"]},
+    )
+    assert response.status_code == 422
+    assert client.received == {}

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
@@ -242,6 +242,8 @@ async def delete_session(session_id: UUID, user_id: UUID):
 
 
 class CVAnalysisRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     job_description: str | None = None
 
 
