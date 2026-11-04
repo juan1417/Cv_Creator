@@ -72,6 +72,18 @@ function extractDetail(body: string): string | null {
   return null;
 }
 
+/** Un 404 significa que el recurso ya no existe. */
+export function isNotFoundError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}
+
+/** Mensaje apto para el usuario: el `detail` de FastAPI o uno genérico. */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.detail) return error.detail;
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
 async function request<T>(
   path: string,
   init?: RequestInit,

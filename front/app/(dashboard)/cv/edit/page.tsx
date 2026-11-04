@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/app/lib/auth";
 import {
-  ApiError,
+  apiErrorMessage,
+  isNotFoundError,
   getFullCV,
   updateCV,
   addExperience,
@@ -303,17 +304,8 @@ export default function CVEditPage() {
 
 // ─── Error helpers ────────────────────────────────────────────────────────────
 
-/** Un 404 al borrar significa que el item ya no estaba: no es un fallo. */
-function isNotFound(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 404;
-}
-
-/** Mensaje apto para el usuario: el `detail` de FastAPI o uno genérico. */
-function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError && error.detail) return error.detail;
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
-}
+// `isNotFoundError` y `apiErrorMessage` viven en api.ts junto a `ApiError`,
+// para que el asistente y el editor compartan la misma lectura de errores.
 
 // ─── Reusable Field ──────────────────────────────────────────────────────────
 
@@ -428,8 +420,8 @@ function ExperiencesSection({
       await deleteExperience(id, userId);
     } catch (e) {
       // Que el item ya no exista es el resultado deseado, no un fallo.
-      if (!isNotFound(e)) {
-        onError(errorMessage(e, "No se pudo eliminar la experiencia"));
+      if (!isNotFoundError(e)) {
+        onError(apiErrorMessage(e, "No se pudo eliminar la experiencia"));
       }
     } finally {
       deletingRef.current = false;
@@ -649,8 +641,8 @@ function SkillsSection({
       await deleteSkill(id, userId);
     } catch (e) {
       // Que el item ya no exista es el resultado deseado, no un fallo.
-      if (!isNotFound(e)) {
-        onError(errorMessage(e, "No se pudo eliminar la habilidad"));
+      if (!isNotFoundError(e)) {
+        onError(apiErrorMessage(e, "No se pudo eliminar la habilidad"));
       }
     } finally {
       deletingRef.current = false;
@@ -839,8 +831,8 @@ function EducationSection({
       await deleteEducation(id, userId);
     } catch (e) {
       // Que el item ya no exista es el resultado deseado, no un fallo.
-      if (!isNotFound(e)) {
-        onError(errorMessage(e, "No se pudo eliminar la formación"));
+      if (!isNotFoundError(e)) {
+        onError(apiErrorMessage(e, "No se pudo eliminar la formación"));
       }
     } finally {
       deletingRef.current = false;
@@ -976,8 +968,8 @@ function AchievementsSection({
       await deleteAchievement(id, userId);
     } catch (e) {
       // Que el item ya no exista es el resultado deseado, no un fallo.
-      if (!isNotFound(e)) {
-        onError(errorMessage(e, "No se pudo eliminar el logro"));
+      if (!isNotFoundError(e)) {
+        onError(apiErrorMessage(e, "No se pudo eliminar el logro"));
       }
     } finally {
       deletingRef.current = false;
@@ -1083,8 +1075,8 @@ function ProgramsSection({
       await deleteProgram(id, userId);
     } catch (e) {
       // Que el item ya no exista es el resultado deseado, no un fallo.
-      if (!isNotFound(e)) {
-        onError(errorMessage(e, "No se pudo eliminar el programa"));
+      if (!isNotFoundError(e)) {
+        onError(apiErrorMessage(e, "No se pudo eliminar el programa"));
       }
     } finally {
       deletingRef.current = false;
@@ -1205,8 +1197,8 @@ function LanguagesSection({
       await deleteLanguage(id, userId);
     } catch (e) {
       // Que el item ya no exista es el resultado deseado, no un fallo.
-      if (!isNotFound(e)) {
-        onError(errorMessage(e, "No se pudo eliminar el idioma"));
+      if (!isNotFoundError(e)) {
+        onError(apiErrorMessage(e, "No se pudo eliminar el idioma"));
       }
     } finally {
       deletingRef.current = false;
