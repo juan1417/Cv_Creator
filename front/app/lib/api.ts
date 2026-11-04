@@ -486,13 +486,6 @@ export interface SkillCatalogItem {
   is_custom: boolean;
 }
 
-export async function searchSkillCatalog(
-  query: string,
-): Promise<{ results: SkillCatalogItem[] }> {
-  const params = new URLSearchParams({ q: query });
-  return request(`/api/skills-catalog/search?${params}`);
-}
-
 export async function getSkillCatalogByCategory(): Promise<{
   categories: Record<string, SkillCatalogItem[]>;
 }> {

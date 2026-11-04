@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   addAchievement,
@@ -16,8 +16,8 @@ import {
   deleteLanguage,
   deleteProgram,
   deleteSkill,
+  getSkillCatalogByCategory,
   isNotFoundError,
-  searchSkillCatalog,
   updateExperience,
   type SkillCatalogItem,
 } from "@/app/lib/api";
@@ -164,6 +164,31 @@ function FormFooter({
       </div>
     </div>
   );
+}
+
+// ─── Catálogo de habilidades ─────────────────────────────────────────────────
+
+let skillCatalogCache: Promise<SkillCatalogItem[]> | null = null;
+
+/**
+ * El catálogo son ~107 filas fijas y cada ida a la base cuesta cientos de
+ * milisegundos (RTT + ping de conexión): se pide una vez por sesión y se
+ * filtra en el navegador, en vez de consultar por cada tecla.
+ */
+function loadSkillCatalog(): Promise<SkillCatalogItem[]> {
+  if (!skillCatalogCache) {
+    skillCatalogCache = getSkillCatalogByCategory()
+      .then((data) => Object.values(data.categories).flat())
+      .catch((error) => {
+        skillCatalogCache = null; // para poder reintentar en el próximo foco
+        throw error;
+      });
+  }
+  return skillCatalogCache;
+}
+
+function normalizeText(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 // ─── Datos personales ────────────────────────────────────────────────────────
@@ -836,29 +861,33 @@ export function SkillPicker({
   const [level, setLevel] = useState(SKILL_LEVELS[1]);
   const [error, setError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
-  const [suggestions, setSuggestions] = useState<SkillCatalogItem[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [catalog, setCatalog] = useState<SkillCatalogItem[] | null>(null);
   const deletingRef = useRef(false);
 
   const skills = cv.skills.filter((skill) => (skill.type || "tech") === type);
 
   useEffect(() => {
-    if (query.trim().length < 1) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    const timer = window.setTimeout(async () => {
-      try {
-        const data = await searchSkillCatalog(query);
-        setSuggestions(data.results);
-        setShowSuggestions(data.results.length > 0);
-      } catch {
-        setSuggestions([]);
-      }
-    }, 200);
-    return () => window.clearTimeout(timer);
-  }, [query]);
+    let alive = true;
+    loadSkillCatalog()
+      .then((items) => {
+        if (alive) setCatalog(items);
+      })
+      .catch(() => {
+        // Sin sugerencias el usuario igual puede escribir la suya.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Filtrado local: cero requests mientras se tipea.
+  const suggestions = useMemo(() => {
+    const needle = normalizeText(query.trim());
+    if (!needle || !catalog) return [];
+    return catalog
+      .filter((item) => normalizeText(item.name).includes(needle))
+      .slice(0, 6);
+  }, [catalog, query]);
 
   const handleAdd = async (name?: string) => {
     const candidate = (name ?? query).trim();
@@ -873,7 +902,6 @@ export function SkillPicker({
       await addSkill({ user_id: userId, name: candidate, level, type });
       await onChanged();
       setQuery("");
-      setShowSuggestions(false);
     } catch (e) {
       const message = apiErrorMessage(e, "No se pudo agregar la habilidad");
       setError(message);
@@ -914,7 +942,7 @@ export function SkillPicker({
             placeholder={type === "tech" ? "Python, React, SQL…" : "Comunicación, liderazgo…"}
             error={error}
           />
-          {showSuggestions && suggestions.length > 0 && (
+          {suggestions.length > 0 && (
             <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-[#334155] bg-[#1E293B] shadow-xl">
               {suggestions.slice(0, 6).map((item) => (
                 <li key={item.id}>
