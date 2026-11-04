@@ -262,7 +262,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-white">Secciones del CV</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">{filledSections}/{cvSections.length} completadas</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{filledSections}/{sectionCards.length} completadas</p>
               </div>
               <Link
                 href="/cv/edit"
