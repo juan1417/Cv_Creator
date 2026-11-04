@@ -241,20 +241,21 @@ async def delete_session(session_id: UUID, user_id: UUID):
         return {"message": "Sesion eliminada correctamente"}
 
 
-@router.post("/cv-analysis", response_model=CVAnalysis)
-async def cv_analysis(user_id: UUID, sections: list[str] | None = None):
-    """
-    Analiza el CV. Si se envía 'sections', solo re-analiza esas secciones
-    y usa cache para el resto.
+class CVAnalysisRequest(BaseModel):
+    job_description: str | None = None
 
-    Secciones válidas: personal, experience, education, skills, languages
+
+@router.post("/cv-analysis", response_model=CVAnalysis)
+async def cv_analysis(user_id: UUID, req: CVAnalysisRequest | None = None):
+    """
+    Analiza el CV con métricas deterministas.
+
+    Si se envía 'job_description', la compatibilidad ATS incluye la cobertura
+    de palabras clave de la vacante.
     """
     try:
-        valid_sections = {"personal", "experience", "education", "skills", "languages"}
-        if sections is not None:
-            sections = [s for s in sections if s in valid_sections]
-
-        result = await asyncio.to_thread(analyze_cv, user_id, sections)
+        job_description = req.job_description if req else None
+        result = await asyncio.to_thread(analyze_cv, user_id, job_description)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
