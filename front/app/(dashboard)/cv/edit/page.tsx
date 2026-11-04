@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/app/lib/auth";
 import {
+  ApiError,
   getFullCV,
   updateCV,
   addExperience,
@@ -106,6 +107,20 @@ export default function CVEditPage() {
       setError(e instanceof Error ? e.message : "Error al cargar el CV");
     } finally {
       setLoading(false);
+    }
+  }, [user]);
+
+  // Refresco tras guardar: actualiza la lista sin mostrar el spinner y sin
+  // pisar los campos que el usuario pueda estar escribiendo en este momento.
+  const refreshCV = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await getFullCV(user.id);
+      setCv(data);
+      setError(null);
+    } catch (e) {
+      // El estado local sigue siendo válido: se avisa sin desmontar la página.
+      setError(e instanceof Error ? e.message : "No se pudo actualizar el CV");
     }
   }, [user]);
 
@@ -223,7 +238,8 @@ export default function CVEditPage() {
       <ExperiencesSection
         experiences={cv?.experiences ?? []}
         userId={user!.id}
-        onChanged={fetchCV}
+        onChanged={refreshCV}
+        onError={(m) => setError(m)}
       />
 
       {/* ── Tecnologías (tech skills) ─────────────────────────────────── */}
@@ -234,7 +250,8 @@ export default function CVEditPage() {
         placeholder="Escribí para buscar: React, Python, SQL..."
         skills={cv?.skills ?? []}
         userId={user!.id}
-        onChanged={fetchCV}
+        onChanged={refreshCV}
+        onError={(m) => setError(m)}
       />
 
       {/* ── Skills Adicionales (soft skills) ──────────────────────────── */}
@@ -245,38 +262,57 @@ export default function CVEditPage() {
         placeholder="Escribí para buscar: Liderazgo, Comunicación..."
         skills={cv?.skills ?? []}
         userId={user!.id}
-        onChanged={fetchCV}
+        onChanged={refreshCV}
+        onError={(m) => setError(m)}
       />
 
       {/* ── Education ─────────────────────────────────────────────────── */}
       <EducationSection
         education={cv?.education ?? []}
         userId={user!.id}
-        onChanged={fetchCV}
+        onChanged={refreshCV}
+        onError={(m) => setError(m)}
       />
 
       {/* ── Logros Destacados ──────────────────────────────────────────── */}
       <AchievementsSection
         achievements={cv?.achievements ?? []}
         userId={user!.id}
-        onChanged={fetchCV}
+        onChanged={refreshCV}
+        onError={(m) => setError(m)}
       />
 
       {/* ── Programas ──────────────────────────────────────────────────── */}
       <ProgramsSection
         programs={cv?.programs ?? []}
         userId={user!.id}
-        onChanged={fetchCV}
+        onChanged={refreshCV}
+        onError={(m) => setError(m)}
       />
 
       {/* ── Idiomas ────────────────────────────────────────────────────── */}
       <LanguagesSection
         languages={cv?.languages ?? []}
         userId={user!.id}
-        onChanged={fetchCV}
+        onChanged={refreshCV}
+        onError={(m) => setError(m)}
       />
     </div>
   );
+}
+
+// ─── Error helpers ────────────────────────────────────────────────────────────
+
+/** Un 404 al borrar significa que el item ya no estaba: no es un fallo. */
+function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}
+
+/** Mensaje apto para el usuario: el `detail` de FastAPI o uno genérico. */
+function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.detail) return error.detail;
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
 }
 
 // ─── Reusable Field ──────────────────────────────────────────────────────────
@@ -316,10 +352,12 @@ function ExperiencesSection({
   experiences,
   userId,
   onChanged,
+  onError,
 }: {
   experiences: ExperienceResponse[];
   userId: string;
   onChanged: () => void;
+  onError: (message: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -381,9 +419,22 @@ function ExperiencesSection({
     }
   };
 
+  const deletingRef = useRef(false);
+
   const handleDelete = async (id: string) => {
-    await deleteExperience(id, userId);
-    onChanged();
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    try {
+      await deleteExperience(id, userId);
+    } catch (e) {
+      // Que el item ya no exista es el resultado deseado, no un fallo.
+      if (!isNotFound(e)) {
+        onError(errorMessage(e, "No se pudo eliminar la experiencia"));
+      }
+    } finally {
+      deletingRef.current = false;
+      onChanged();
+    }
   };
 
   return (
@@ -479,6 +530,7 @@ function SkillsSection({
   skills,
   userId,
   onChanged,
+  onError,
 }: {
   title: string;
   subtitle: string;
@@ -487,6 +539,7 @@ function SkillsSection({
   skills: SkillResponse[];
   userId: string;
   onChanged: () => void;
+  onError: (message: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState("Intermedio");
@@ -587,9 +640,22 @@ function SkillsSection({
     }
   };
 
+  const deletingRef = useRef(false);
+
   const handleDelete = async (id: string) => {
-    await deleteSkill(id, userId);
-    onChanged();
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    try {
+      await deleteSkill(id, userId);
+    } catch (e) {
+      // Que el item ya no exista es el resultado deseado, no un fallo.
+      if (!isNotFound(e)) {
+        onError(errorMessage(e, "No se pudo eliminar la habilidad"));
+      }
+    } finally {
+      deletingRef.current = false;
+      onChanged();
+    }
   };
 
   // Filter out already-added skills from suggestions
@@ -705,10 +771,12 @@ function EducationSection({
   education,
   userId,
   onChanged,
+  onError,
 }: {
   education: EducationResponse[];
   userId: string;
   onChanged: () => void;
+  onError: (message: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -762,9 +830,22 @@ function EducationSection({
     }
   };
 
+  const deletingRef = useRef(false);
+
   const handleDelete = async (id: string) => {
-    await deleteEducation(id, userId);
-    onChanged();
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    try {
+      await deleteEducation(id, userId);
+    } catch (e) {
+      // Que el item ya no exista es el resultado deseado, no un fallo.
+      if (!isNotFound(e)) {
+        onError(errorMessage(e, "No se pudo eliminar la formación"));
+      }
+    } finally {
+      deletingRef.current = false;
+      onChanged();
+    }
   };
 
   return (
@@ -854,10 +935,12 @@ function AchievementsSection({
   achievements,
   userId,
   onChanged,
+  onError,
 }: {
   achievements: AchievementResponse[];
   userId: string;
   onChanged: () => void;
+  onError: (message: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -884,9 +967,22 @@ function AchievementsSection({
     }
   };
 
+  const deletingRef = useRef(false);
+
   const handleDelete = async (id: string) => {
-    await deleteAchievement(id, userId);
-    onChanged();
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    try {
+      await deleteAchievement(id, userId);
+    } catch (e) {
+      // Que el item ya no exista es el resultado deseado, no un fallo.
+      if (!isNotFound(e)) {
+        onError(errorMessage(e, "No se pudo eliminar el logro"));
+      }
+    } finally {
+      deletingRef.current = false;
+      onChanged();
+    }
   };
 
   return (
@@ -954,10 +1050,12 @@ function ProgramsSection({
   programs,
   userId,
   onChanged,
+  onError,
 }: {
   programs: ProgramResponse[];
   userId: string;
   onChanged: () => void;
+  onError: (message: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -976,9 +1074,22 @@ function ProgramsSection({
     }
   };
 
+  const deletingRef = useRef(false);
+
   const handleDelete = async (id: string) => {
-    await deleteProgram(id, userId);
-    onChanged();
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    try {
+      await deleteProgram(id, userId);
+    } catch (e) {
+      // Que el item ya no exista es el resultado deseado, no un fallo.
+      if (!isNotFound(e)) {
+        onError(errorMessage(e, "No se pudo eliminar el programa"));
+      }
+    } finally {
+      deletingRef.current = false;
+      onChanged();
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -1053,10 +1164,12 @@ function LanguagesSection({
   languages,
   userId,
   onChanged,
+  onError,
 }: {
   languages: LanguageResponse[];
   userId: string;
   onChanged: () => void;
+  onError: (message: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -1083,9 +1196,22 @@ function LanguagesSection({
     }
   };
 
+  const deletingRef = useRef(false);
+
   const handleDelete = async (id: string) => {
-    await deleteLanguage(id, userId);
-    onChanged();
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    try {
+      await deleteLanguage(id, userId);
+    } catch (e) {
+      // Que el item ya no exista es el resultado deseado, no un fallo.
+      if (!isNotFound(e)) {
+        onError(errorMessage(e, "No se pudo eliminar el idioma"));
+      }
+    } finally {
+      deletingRef.current = false;
+      onChanged();
+    }
   };
 
   return (

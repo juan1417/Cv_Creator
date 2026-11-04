@@ -43,6 +43,35 @@ import type {
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export class ApiError extends Error {
+  readonly status: number;
+  readonly detail: string | null;
+
+  constructor(status: number, body: string) {
+    super(`API error ${status}: ${body}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = extractDetail(body);
+  }
+}
+
+/** Extrae el `detail` que FastAPI devuelve en el cuerpo del error. */
+function extractDetail(body: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      typeof (parsed as { detail?: unknown }).detail === "string"
+    ) {
+      return (parsed as { detail: string }).detail;
+    }
+  } catch {
+    // Cuerpo no JSON (HTML de un proxy, etc.): se queda sin detail.
+  }
+  return null;
+}
+
 async function request<T>(
   path: string,
   init?: RequestInit,
@@ -59,7 +88,7 @@ async function request<T>(
     });
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`API error ${res.status}: ${body}`);
+      throw new ApiError(res.status, body);
     }
     return res.json() as Promise<T>;
   } finally {
