@@ -34,7 +34,12 @@ STOPWORDS: frozenset[str] = frozenset({
     "deseable", "imprescindible", "valorable", "experiencia", "experiencias",
     "año", "años", "ano", "anos", "mes", "meses", "nivel", "conocimiento",
     "conocimientos", "manejo", "uso", "ademas", "además", "tener", "tiene",
-    "debe", "deberá", "debera", "zona", "horario", "remoto", "hibrido",
+    "debe", "deberá", "debera", "zona", "horario", "remoto", "remota",
+    "hibrido", "hibrida", "inmediata",
+    # Muletillas de avisos (encontradas en ofertas reales)
+    "vacante", "perfil", "disponible", "valora", "valoramos", "postular",
+    "postulacion", "incorporacion", "contratacion", "sumarte", "sumamos",
+    "sumate", "busca", "buscan", "busqueda", "lugar", "area", "equipo",
     # Inglés
     "the", "and", "or", "of", "to", "in", "on", "for", "with", "a", "an", "is",
     "are", "be", "as", "at", "by", "from", "will", "you", "your", "we", "our",

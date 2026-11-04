@@ -40,3 +40,17 @@ def test_keyword_coverage_without_description_is_empty():
     assert coverage.job_description_provided is False
     assert coverage.total == 0
     assert coverage.matched == []
+
+
+def test_offer_boilerplate_is_not_a_keyword():
+    """El lenguaje típico de un aviso no debe contar como keyword."""
+    text = (
+        "Vacante disponible. Perfil buscado: se valora experiencia previa en "
+        "equipo, incorporación inmediata, modalidad remota."
+    )
+    keywords = [k.lower() for k in extract_keywords(text)]
+    for boilerplate in (
+        "vacante", "disponible", "perfil", "valora", "experiencia",
+        "equipo", "incorporacion", "remota",
+    ):
+        assert boilerplate not in keywords, boilerplate
