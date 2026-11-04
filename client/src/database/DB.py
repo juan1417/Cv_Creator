@@ -35,5 +35,5 @@ def validate_database_connection() -> bool:
         try:
             session.execute(select(1))
             return True
-        except Exception as e:
+        except Exception:
             return False

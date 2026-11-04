@@ -1,4 +1,3 @@
-from uuid import UUID
 from fastapi import APIRouter, Query
 
 from database.skill_catalog import search_skills, list_skills_by_category, add_custom_skill

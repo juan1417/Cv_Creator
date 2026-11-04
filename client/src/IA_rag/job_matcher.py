@@ -3,7 +3,7 @@ import logging
 import re
 from uuid import UUID
 
-from database.get_user_cv import get_user_cv_data, get_user_cv_formatted
+from database.get_user_cv import get_user_cv_formatted
 from .generator import generate_response
 
 logger = logging.getLogger(__name__)
