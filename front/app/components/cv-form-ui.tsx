@@ -10,6 +10,8 @@ export interface StepProps {
   cv: FullCV;
   /** Refresco silencioso tras una mutación (sin spinner, sin desmontar). */
   onChanged: () => void;
+  /** Parchea el CV en memoria para que el cambio se vea al instante. */
+  onLocal: (patch: (cv: FullCV) => FullCV) => void;
   /** Avanza al paso siguiente. */
   onAdvance: () => void;
 }

@@ -129,6 +129,11 @@ export default function CVEditPage() {
     }
   }, [user]);
 
+  // Cambio optimista: se muestra al instante y el refresco lo confirma.
+  const patchCv = useCallback((patch: (current: FullCV) => FullCV) => {
+    setCv((prev) => (prev ? patch(prev) : prev));
+  }, []);
+
   // Refresco tras guardar: actualiza la lista sin mostrar el spinner y sin
   // pisar los campos que el usuario pueda estar escribiendo en este momento.
   const refreshCV = useCallback(async () => {
@@ -259,13 +264,13 @@ export default function CVEditPage() {
       </section>
 
       {/* ── Secciones (módulos compartidos con el asistente) ────────────── */}
-      <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} title="Experiencia" subtitle="Puestos, proyectos o freelance" />
-      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} type="tech" title="Tecnologías" subtitle="Lenguajes, frameworks y herramientas técnicas" />
-      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} type="soft" title="Skills Adicionales" subtitle="Habilidades blandas y competencias" />
-      <EducationManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} title="Formación" subtitle="Carreras, tecnicaturas y certificaciones" />
-      <AchievementManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} title="Logros Destacados" subtitle="Premios, publicaciones y proyectos propios" />
-      <ProgramPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} title="Programas" subtitle="Herramientas, cursos y certificaciones" />
-      <LanguagePicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} title="Idiomas" subtitle="Nivel con estándar europeo si lo tenés" />
+      <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Experiencia" subtitle="Puestos, proyectos o freelance" />
+      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="tech" title="Tecnologías" subtitle="Lenguajes, frameworks y herramientas técnicas" />
+      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="soft" title="Skills Adicionales" subtitle="Habilidades blandas y competencias" />
+      <EducationManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Formación" subtitle="Carreras, tecnicaturas y certificaciones" />
+      <AchievementManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Logros Destacados" subtitle="Premios, publicaciones y proyectos propios" />
+      <ProgramPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Programas" subtitle="Herramientas, cursos y certificaciones" />
+      <LanguagePicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Idiomas" subtitle="Nivel con estándar europeo si lo tenés" />
     </div>
   );
 }

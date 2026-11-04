@@ -7,14 +7,14 @@ import { StepActions, type StepProps } from "@/app/components/cv-form-ui";
  * Paso 3: formación. El formulario vive en `EducationManager`, compartido con
  * el editor.
  */
-export function EducationStep({ cv, userId, onChanged, onAdvance }: StepProps) {
+export function EducationStep({ cv, userId, onChanged, onLocal, onAdvance }: StepProps) {
   return (
     <div className="space-y-5">
       <p className="text-sm text-[#94A3B8]">
         Carreras, tecnicaturas, cursos largos y certificaciones importantes.
       </p>
 
-      <EducationManager cv={cv} userId={userId} onChanged={onChanged} plain />
+      <EducationManager cv={cv} userId={userId} onChanged={onChanged} onLocal={onLocal} plain />
 
       <StepActions
         onNext={onAdvance}

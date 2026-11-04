@@ -7,7 +7,7 @@ import { StepActions, type StepProps } from "@/app/components/cv-form-ui";
  * Paso 4: habilidades. Los tres bloques (técnicas, blandas y programas) son
  * los mismos componentes que usa el editor.
  */
-export function SkillsStep({ cv, userId, onChanged, onAdvance }: StepProps) {
+export function SkillsStep({ cv, userId, onChanged, onLocal, onAdvance }: StepProps) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-[#94A3B8]">
@@ -19,6 +19,7 @@ export function SkillsStep({ cv, userId, onChanged, onAdvance }: StepProps) {
         cv={cv}
         userId={userId}
         onChanged={onChanged}
+        onLocal={onLocal}
         type="tech"
         subtitle="Lenguajes, frameworks, bases de datos y herramientas"
         plain
@@ -27,6 +28,7 @@ export function SkillsStep({ cv, userId, onChanged, onAdvance }: StepProps) {
         cv={cv}
         userId={userId}
         onChanged={onChanged}
+        onLocal={onLocal}
         type="soft"
         subtitle="Cómo trabajás: comunicación, liderazgo, organización"
         plain
@@ -35,6 +37,7 @@ export function SkillsStep({ cv, userId, onChanged, onAdvance }: StepProps) {
         cv={cv}
         userId={userId}
         onChanged={onChanged}
+        onLocal={onLocal}
         subtitle="Herramientas, cursos y certificaciones (sección TECNOLOGÍAS)"
         plain
       />

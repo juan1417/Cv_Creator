@@ -8,7 +8,7 @@ import { StepActions, type StepProps } from "@/app/components/cv-form-ui";
  * con el editor, así que alta, edición y baja se comportan igual en los dos
  * caminos.
  */
-export function ExperienceStep({ cv, userId, onChanged, onAdvance }: StepProps) {
+export function ExperienceStep({ cv, userId, onChanged, onLocal, onAdvance }: StepProps) {
   return (
     <div className="space-y-5">
       <p className="text-sm text-[#94A3B8]">
@@ -16,7 +16,7 @@ export function ExperienceStep({ cv, userId, onChanged, onAdvance }: StepProps) 
         avanzar: después la cargás cuando la tengas.
       </p>
 
-      <ExperienceManager cv={cv} userId={userId} onChanged={onChanged} plain />
+      <ExperienceManager cv={cv} userId={userId} onChanged={onChanged} onLocal={onLocal} plain />
 
       <StepActions
         onNext={onAdvance}

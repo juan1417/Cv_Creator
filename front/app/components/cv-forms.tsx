@@ -46,7 +46,15 @@ import {
   TextAreaField,
   TextField,
 } from "@/app/components/cv-form-ui";
-import type { FullCV } from "@/app/lib/types";
+import type {
+  AchievementResponse,
+  EducationResponse,
+  ExperienceResponse,
+  FullCV,
+  LanguageResponse,
+  ProgramResponse,
+  SkillResponse,
+} from "@/app/lib/types";
 
 /**
  * Formularios por entidad compartidos por el editor (`/cv/edit`) y el
@@ -67,6 +75,11 @@ interface ManagerProps {
   subtitle?: string;
   /** El asistente ya tiene el marco: el componente no agrega borde ni fondo. */
   plain?: boolean;
+  /**
+   * Parchea el CV en memoria para que el cambio se vea al instante; el
+   * refresco en segundo plano lo confirma con el servidor.
+   */
+  onLocal?: (patch: (cv: FullCV) => FullCV) => void;
 }
 
 type SaveStatus = "idle" | "saving" | "error";
@@ -317,6 +330,7 @@ export function ExperienceManager({
   title,
   subtitle,
   plain,
+  onLocal,
 }: ManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -380,14 +394,28 @@ export function ExperienceManager({
         end_date: form.end_date || undefined,
         description: form.description.trim(),
       };
-      if (editId) {
-        await updateExperience(editId, payload);
-      } else {
-        await addExperience(payload);
-      }
-      await onChanged();
+      const result = editId
+        ? await updateExperience(editId, payload)
+        : await addExperience(payload);
+      const optimistic: ExperienceResponse = {
+        id: editId ?? result?.new_id ?? `optimistic-${payload.title}`,
+        title: payload.title,
+        company: payload.company,
+        start_date: payload.start_date ?? null,
+        end_date: payload.end_date ?? null,
+        description: payload.description,
+      };
+      onLocal?.((current) => ({
+        ...current,
+        experiences: editId
+          ? current.experiences.map((item) =>
+              item.id === editId ? { ...item, ...optimistic } : item,
+            )
+          : [optimistic, ...current.experiences],
+      }));
       setShowForm(false);
       setStatus("idle");
+      void onChanged();
     } catch (e) {
       setStatus("error");
       const message = apiErrorMessage(e, "No se pudo guardar la experiencia");
@@ -399,6 +427,12 @@ export function ExperienceManager({
   const handleDelete = async (id: string) => {
     if (deletingRef.current) return;
     deletingRef.current = true;
+    // Se quita de la vista al instante; si el servidor falla, el refresco la
+    // vuelve a poner y se avisa.
+    onLocal?.((current) => ({
+      ...current,
+      experiences: current.experiences.filter((item) => item.id !== id),
+    }));
     try {
       await deleteExperience(id, userId);
     } catch (e) {
@@ -406,10 +440,11 @@ export function ExperienceManager({
         const message = apiErrorMessage(e, "No se pudo eliminar la experiencia");
         setGeneral(message);
         onError?.(message);
+        void onChanged();
       }
     } finally {
       deletingRef.current = false;
-      await onChanged();
+      void onChanged();
     }
   };
 
@@ -526,6 +561,7 @@ export function EducationManager({
   title,
   subtitle,
   plain,
+  onLocal,
 }: ManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -584,7 +620,7 @@ export function EducationManager({
     setGeneral(undefined);
     try {
       // Alta primero, baja después (ver nota arriba).
-      await addEducation({
+      const created = await addEducation({
         user_id: userId,
         degree: form.degree.trim(),
         institution: form.institution.trim(),
@@ -592,16 +628,35 @@ export function EducationManager({
         end_date: form.end_date || undefined,
         description: originalDescription || undefined,
       });
-      if (editId) {
-        try {
-          await deleteEducation(editId, userId);
-        } catch {
-          // Duplicado visible en vez de dato perdido.
-        }
-      }
-      await onChanged();
+      const optimistic: EducationResponse = {
+        id: created?.new_id ?? `optimistic-${form.degree}`,
+        degree: form.degree.trim(),
+        institution: form.institution.trim(),
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
+        description: originalDescription,
+      };
+      onLocal?.((current) => ({
+        ...current,
+        education: [
+          optimistic,
+          ...(editId
+            ? current.education.filter((item) => item.id !== editId)
+            : current.education),
+        ],
+      }));
       setShowForm(false);
       setStatus("idle");
+      void (async () => {
+        if (editId) {
+          try {
+            await deleteEducation(editId, userId);
+          } catch {
+            // Duplicado visible en vez de dato perdido.
+          }
+        }
+        await onChanged();
+      })();
     } catch (e) {
       setStatus("error");
       const message = apiErrorMessage(e, "No se pudo guardar la formación");
@@ -613,6 +668,12 @@ export function EducationManager({
   const handleDelete = async (id: string) => {
     if (deletingRef.current) return;
     deletingRef.current = true;
+    // Se quita de la vista al instante; si el servidor falla, el refresco la
+    // vuelve a poner y se avisa.
+    onLocal?.((current) => ({
+      ...current,
+      education: current.education.filter((item) => item.id !== id),
+    }));
     try {
       await deleteEducation(id, userId);
     } catch (e) {
@@ -620,10 +681,11 @@ export function EducationManager({
         const message = apiErrorMessage(e, "No se pudo eliminar la formación");
         setGeneral(message);
         onError?.(message);
+        void onChanged();
       }
     } finally {
       deletingRef.current = false;
-      await onChanged();
+      void onChanged();
     }
   };
 
@@ -717,8 +779,10 @@ export function AchievementManager({
   title,
   subtitle,
   plain,
+  onLocal,
 }: ManagerProps) {
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<AchievementData>(EMPTY_ACHIEVEMENT);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<SaveStatus>("idle");
@@ -728,6 +792,7 @@ export function AchievementManager({
   const openCreate = () => {
     setForm(EMPTY_ACHIEVEMENT);
     setErrors({});
+    setEditId(null);
     setGeneral(undefined);
     setStatus("idle");
     setShowForm(true);
@@ -741,14 +806,38 @@ export function AchievementManager({
     setStatus("saving");
     setGeneral(undefined);
     try {
-      await addAchievement({
+      const created = await addAchievement({
         user_id: userId,
         title: form.title.trim(),
         description: form.description.trim() || undefined,
       });
-      await onChanged();
+      const optimistic: AchievementResponse = {
+        id: editId ?? created.id ?? `optimistic-${form.title}`,
+        title: form.title.trim(),
+        description: form.description.trim(),
+      };
+      onLocal?.((current) => ({
+        ...current,
+        achievements: editId
+          ? current.achievements.map((item) =>
+              item.id === editId ? optimistic : item,
+            )
+          : [...current.achievements, optimistic],
+      }));
       setShowForm(false);
+      setEditId(null);
       setStatus("idle");
+      void (async () => {
+        // La API no tiene update de logros: alta nueva y después baja.
+        if (editId) {
+          try {
+            await deleteAchievement(editId, userId);
+          } catch {
+            // Duplicado visible en vez de dato perdido.
+          }
+        }
+        await onChanged();
+      })();
     } catch (e) {
       setStatus("error");
       const message = apiErrorMessage(e, "No se pudo guardar el logro");
@@ -760,6 +849,12 @@ export function AchievementManager({
   const handleDelete = async (id: string) => {
     if (deletingRef.current) return;
     deletingRef.current = true;
+    // Se quita de la vista al instante; si el servidor falla, el refresco la
+    // vuelve a poner y se avisa.
+    onLocal?.((current) => ({
+      ...current,
+      achievements: current.achievements.filter((item) => item.id !== id),
+    }));
     try {
       await deleteAchievement(id, userId);
     } catch (e) {
@@ -767,10 +862,11 @@ export function AchievementManager({
         const message = apiErrorMessage(e, "No se pudo eliminar el logro");
         setGeneral(message);
         onError?.(message);
+        void onChanged();
       }
     } finally {
       deletingRef.current = false;
-      await onChanged();
+      void onChanged();
     }
   };
 
@@ -808,7 +904,7 @@ export function AchievementManager({
             status={status}
             onCancel={() => setShowForm(false)}
             onSave={handleSave}
-            saveLabel="Agregar logro"
+            saveLabel={editId ? "Actualizar" : "Agregar logro"}
           />
         </div>
       ) : (
@@ -829,6 +925,7 @@ export function AchievementManager({
               onEdit={() => {
                 setForm({ title: item.title, description: item.description });
                 setErrors({});
+                setEditId(item.id);
                 setGeneral(undefined);
                 setShowForm(true);
               }}
@@ -855,6 +952,7 @@ export function SkillPicker({
   title,
   subtitle,
   plain,
+  onLocal,
   type,
 }: SkillPickerProps) {
   const [query, setQuery] = useState("");
@@ -896,24 +994,44 @@ export function SkillPicker({
       setError(problem);
       return;
     }
+    // El chip aparece al instante; si el POST falla, el refresco lo quita.
+    const optimistic: SkillResponse = {
+      id: `optimistic-${candidate}`,
+      name: candidate,
+      level,
+      type,
+    };
+    onLocal?.((current) => ({ ...current, skills: [...current.skills, optimistic] }));
+    setQuery("");
     setSaving(true);
     setError(undefined);
     try {
-      await addSkill({ user_id: userId, name: candidate, level, type });
-      await onChanged();
-      setQuery("");
+      const created = await addSkill({ user_id: userId, name: candidate, level, type });
+      onLocal?.((current) => ({
+        ...current,
+        skills: current.skills.map((item) =>
+          item.id === optimistic.id ? { ...item, id: created.new_id ?? item.id } : item,
+        ),
+      }));
     } catch (e) {
       const message = apiErrorMessage(e, "No se pudo agregar la habilidad");
       setError(message);
       onError?.(message);
     } finally {
       setSaving(false);
+      void onChanged();
     }
   };
 
   const handleDelete = async (id: string) => {
     if (deletingRef.current) return;
     deletingRef.current = true;
+    // Se quita de la vista al instante; si el servidor falla, el refresco la
+    // vuelve a poner y se avisa.
+    onLocal?.((current) => ({
+      ...current,
+      skills: current.skills.filter((item) => item.id !== id),
+    }));
     try {
       await deleteSkill(id, userId);
     } catch (e) {
@@ -921,10 +1039,11 @@ export function SkillPicker({
         const message = apiErrorMessage(e, "No se pudo eliminar la habilidad");
         setError(message);
         onError?.(message);
+        void onChanged();
       }
     } finally {
       deletingRef.current = false;
-      await onChanged();
+      void onChanged();
     }
   };
 
@@ -1014,6 +1133,7 @@ export function ProgramPicker({
   title,
   subtitle,
   plain,
+  onLocal,
 }: ManagerProps) {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | undefined>();
@@ -1032,24 +1152,38 @@ export function ProgramPicker({
       setError("Ya está en tu lista");
       return;
     }
+    const optimistic: ProgramResponse = { id: `optimistic-${candidate}`, name: candidate };
+    onLocal?.((current) => ({ ...current, programs: [...current.programs, optimistic] }));
+    setQuery("");
     setSaving(true);
     setError(undefined);
     try {
-      await addProgram({ user_id: userId, name: candidate });
-      await onChanged();
-      setQuery("");
+      const created = await addProgram({ user_id: userId, name: candidate });
+      onLocal?.((current) => ({
+        ...current,
+        programs: current.programs.map((item) =>
+          item.id === optimistic.id ? { ...item, id: created.id ?? item.id } : item,
+        ),
+      }));
     } catch (e) {
       const message = apiErrorMessage(e, "No se pudo agregar el programa");
       setError(message);
       onError?.(message);
     } finally {
       setSaving(false);
+      void onChanged();
     }
   };
 
   const handleDelete = async (id: string) => {
     if (deletingRef.current) return;
     deletingRef.current = true;
+    // Se quita de la vista al instante; si el servidor falla, el refresco la
+    // vuelve a poner y se avisa.
+    onLocal?.((current) => ({
+      ...current,
+      programs: current.programs.filter((item) => item.id !== id),
+    }));
     try {
       await deleteProgram(id, userId);
     } catch (e) {
@@ -1057,10 +1191,11 @@ export function ProgramPicker({
         const message = apiErrorMessage(e, "No se pudo eliminar el programa");
         setError(message);
         onError?.(message);
+        void onChanged();
       }
     } finally {
       deletingRef.current = false;
-      await onChanged();
+      void onChanged();
     }
   };
 
@@ -1121,6 +1256,7 @@ export function LanguagePicker({
   title,
   subtitle,
   plain,
+  onLocal,
 }: ManagerProps) {
   const [form, setForm] = useState<LanguageData>(EMPTY_LANGUAGE);
   const [error, setError] = useState<string | undefined>();
@@ -1144,28 +1280,46 @@ export function LanguagePicker({
       setError("Ya está en tu lista");
       return;
     }
+    const optimistic: LanguageResponse = {
+      id: `optimistic-${form.name.trim()}`,
+      name: form.name.trim(),
+      level: form.level,
+    };
+    onLocal?.((current) => ({ ...current, languages: [...current.languages, optimistic] }));
+    setForm(EMPTY_LANGUAGE);
     setSaving(true);
     setError(undefined);
     try {
-      await addLanguage({
+      const created = await addLanguage({
         user_id: userId,
-        name: form.name.trim(),
-        level: form.level,
+        name: optimistic.name,
+        level: optimistic.level,
       });
-      await onChanged();
-      setForm(EMPTY_LANGUAGE);
+      onLocal?.((current) => ({
+        ...current,
+        languages: current.languages.map((item) =>
+          item.id === optimistic.id ? { ...item, id: created.id ?? item.id } : item,
+        ),
+      }));
     } catch (e) {
       const message = apiErrorMessage(e, "No se pudo guardar el idioma");
       setError(message);
       onError?.(message);
     } finally {
       setSaving(false);
+      void onChanged();
     }
   };
 
   const handleDelete = async (id: string) => {
     if (deletingRef.current) return;
     deletingRef.current = true;
+    // Se quita de la vista al instante; si el servidor falla, el refresco la
+    // vuelve a poner y se avisa.
+    onLocal?.((current) => ({
+      ...current,
+      languages: current.languages.filter((item) => item.id !== id),
+    }));
     try {
       await deleteLanguage(id, userId);
     } catch (e) {
@@ -1173,10 +1327,11 @@ export function LanguagePicker({
         const message = apiErrorMessage(e, "No se pudo eliminar el idioma");
         setError(message);
         onError?.(message);
+        void onChanged();
       }
     } finally {
       deletingRef.current = false;
-      await onChanged();
+      void onChanged();
     }
   };
 

@@ -135,6 +135,11 @@ export default function CreateCVWizardPage() {
     [user],
   );
 
+  // Cambio optimista: se muestra al instante y el refresco lo confirma.
+  const patchCv = useCallback((patch: (current: FullCV) => FullCV) => {
+    setCv((prev) => (prev ? patch(prev) : prev));
+  }, []);
+
   const handleFinish = useCallback(() => {
     if (user) {
       window.localStorage.removeItem(stepStorageKey(user.id));
@@ -272,25 +277,25 @@ export default function CreateCVWizardPage() {
         </div>
 
         {stepIdx === 0 && (
-          <PersonalStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(1)} />
+          <PersonalStep userId={user.id} cv={cv} onChanged={refreshCV} onLocal={patchCv} onAdvance={() => goTo(1)} />
         )}
         {stepIdx === 1 && (
-          <ExperienceStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(2)} />
+          <ExperienceStep userId={user.id} cv={cv} onChanged={refreshCV} onLocal={patchCv} onAdvance={() => goTo(2)} />
         )}
         {stepIdx === 2 && (
-          <EducationStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(3)} />
+          <EducationStep userId={user.id} cv={cv} onChanged={refreshCV} onLocal={patchCv} onAdvance={() => goTo(3)} />
         )}
         {stepIdx === 3 && (
-          <SkillsStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(4)} />
+          <SkillsStep userId={user.id} cv={cv} onChanged={refreshCV} onLocal={patchCv} onAdvance={() => goTo(4)} />
         )}
         {stepIdx === 4 && (
-          <ExtrasStep userId={user.id} cv={cv} onChanged={refreshCV} onAdvance={() => goTo(5)} />
+          <ExtrasStep userId={user.id} cv={cv} onChanged={refreshCV} onLocal={patchCv} onAdvance={() => goTo(5)} />
         )}
         {stepIdx === 5 && (
           <ReviewStep
             userId={user.id}
             cv={cv}
-            onChanged={refreshCV}
+            onChanged={refreshCV} onLocal={patchCv}
             onAdvance={() => goTo(5)}
             onFinish={handleFinish}
           />
