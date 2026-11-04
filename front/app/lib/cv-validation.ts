@@ -108,6 +108,9 @@ export function validateExperience(data: ExperienceData): FieldErrors {
   if (!data.company.trim()) {
     errors.company = "Ingresá la empresa o proyecto";
   }
+  if (!data.start_date.trim()) {
+    errors.start_date = "Ingresá la fecha de inicio";
+  }
   checkDateRange(data.start_date, data.end_date, errors);
 
   return errors;
@@ -128,6 +131,9 @@ export function validateEducation(data: EducationData): FieldErrors {
   }
   if (!data.institution.trim()) {
     errors.institution = "Ingresá la institución";
+  }
+  if (!data.start_date.trim()) {
+    errors.start_date = "Ingresá la fecha de inicio";
   }
   checkDateRange(data.start_date, data.end_date, errors);
 
