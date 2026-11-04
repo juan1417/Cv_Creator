@@ -1,10 +1,15 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Response
+from pydantic import BaseModel, Field
+from typing import Literal
 from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
+import asyncio
+import re
+import unicodedata
 
 from database.DB import get_engine
+from database.get_user_cv import get_user_cv_data
 from models.user import User
 from models.cv import CV
 from models.experience import Experience
@@ -14,6 +19,15 @@ from models.achievement import Achievement
 from models.program import Program
 from models.language import Language
 from IA_rag.job_matcher import compare_cv_job, adapt_cv_for_job
+from IA_rag.metrics import analyze_ats
+from models.cv_analysis import ATSMetrics
+from Cv_made import (
+    CvData,
+    expected_fragments,
+    render_docx,
+    render_pdf,
+    validate_export,
+)
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
@@ -368,3 +382,118 @@ async def adapt_job(req: AdaptJobRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al adaptar: {str(e)}")
+
+
+# ─── Export & ATS report ──────────────────────────────────────────────────────
+
+ExportFormat = Literal["pdf", "docx"]
+
+_MEDIA_TYPES = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+class ExportRequest(BaseModel):
+    user_id: UUID
+    format: ExportFormat = "pdf"
+    # Adaptación opcional: se aplica solo al archivo exportado, nunca a la base.
+    adapted_about: str | None = None
+    adapted_experiences: list[dict] = Field(default_factory=list)
+    adapted_skills: list[dict] = Field(default_factory=list)
+
+
+class ATSReportRequest(BaseModel):
+    user_id: UUID
+    job_description: str | None = None
+
+
+class ATSReportResponse(BaseModel):
+    ats: ATSMetrics
+    export_check: dict
+
+
+def _slug(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text or "")
+    ascii_text = "".join(char for char in decomposed if not unicodedata.combining(char))
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "_", ascii_text).strip("_")
+    return cleaned or "CV"
+
+
+def _export_filename(name: str, export_format: str, adapted: bool) -> str:
+    suffix = "_adapted" if adapted else ""
+    return f"CV_{_slug(name)}{suffix}.{export_format}"
+
+
+def _load_cv_data(user_id: UUID) -> dict:
+    cv_data = get_user_cv_data(user_id)
+    if not cv_data:
+        raise HTTPException(status_code=404, detail="CV no encontrado para este usuario")
+    return cv_data
+
+
+@router.post("/export")
+async def export_cv(req: ExportRequest):
+    """Genera el CV en PDF o DOCX (Harvard) y lo devuelve como descarga.
+
+    Con `adapted_*` devuelve la versión adaptada al puesto como archivo aparte
+    (`_adapted`); el CV base en la base de datos no se toca.
+    """
+    cv_data = _load_cv_data(req.user_id)
+    base = CvData.from_db(cv_data)
+
+    adapted = bool(req.adapted_about or req.adapted_experiences or req.adapted_skills)
+    cv = (
+        base.apply_adaptation(
+            about=req.adapted_about,
+            experiences=req.adapted_experiences,
+            skills=req.adapted_skills,
+        )
+        if adapted
+        else base
+    )
+
+    renderer = render_pdf if req.format == "pdf" else render_docx
+    data = await asyncio.to_thread(renderer, cv)
+
+    validation = validate_export(data, req.format, expected_fragments(cv))
+    if not validation.ok:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "El archivo generado no cumple el formato ATS",
+                "problems": validation.problems,
+            },
+        )
+
+    headers = {
+        "Content-Disposition": (
+            f'attachment; filename="{_export_filename(cv.name, req.format, adapted)}"'
+        ),
+        "X-Export-Format": req.format,
+        "X-Export-Pages": str(validation.pages),
+        "X-Export-Characters": str(validation.characters),
+        "X-Export-Adapted": "true" if adapted else "false",
+    }
+    if validation.warnings:
+        headers["X-Export-Warnings"] = " | ".join(validation.warnings)
+
+    return Response(
+        content=data,
+        media_type=_MEDIA_TYPES[req.format],
+        headers=headers,
+    )
+
+
+@router.post("/ats-report", response_model=ATSReportResponse)
+async def ats_report(req: ATSReportRequest):
+    """Reporte ATS determinista: puntaje, detalles, keywords y validación del
+    archivo que realmente se exporta (DOCX generado en memoria)."""
+    cv_data = _load_cv_data(req.user_id)
+    ats = analyze_ats(cv_data, req.job_description)
+
+    cv = CvData.from_db(cv_data)
+    docx_bytes = await asyncio.to_thread(render_docx, cv)
+    validation = validate_export(docx_bytes, "docx", expected_fragments(cv))
+
+    return ATSReportResponse(ats=ats, export_check=validation.as_dict())
