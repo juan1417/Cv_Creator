@@ -193,7 +193,8 @@ def _skill_groups(cv: CvData) -> list[tuple[str, list[str]]]:
             continue
         add(skill.category.strip() or SKILL_OTHERS, name)
 
-    # Programas: categoría del catálogo si la tienen; si no, "Otros conocimientos".
+    # Programas (cursos, certificaciones, metodologías): sin categoría propia en
+    # la base, comparten la línea de "Otros conocimientos".
     for program in cv.programs:
         name = (program or "").strip()
         if name:
@@ -203,6 +204,14 @@ def _skill_groups(cv: CvData) -> list[tuple[str, list[str]]]:
     for label in SKILL_CATEGORY_ORDER:
         if buckets.get(label):
             groups.append((label, buckets.pop(label)))
+
+    # Categorías que no están en la lista canónica (el catálogo tiene "Soft
+    # Skills" o "Idiomas", y el usuario puede tener una skill técnica marcada
+    # con una de esas): se muestran igual, ordenadas, para no perder datos.
+    for label in sorted(buckets.keys() - {SKILL_OTHERS, SKILL_SOFT}):
+        if buckets[label]:
+            groups.append((label, buckets.pop(label)))
+
     for label in (SKILL_OTHERS, SKILL_SOFT):
         if buckets.get(label):
             groups.append((label, buckets.pop(label)))

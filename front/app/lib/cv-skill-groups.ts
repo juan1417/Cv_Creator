@@ -62,6 +62,17 @@ export function groupSkills(
     const names = buckets.get(label);
     if (names?.length) groups.push({ label, names });
   }
+
+  // Categorías fuera de la lista canónica ("Soft Skills", "Idiomas", ...):
+  // se muestran igual, ordenadas, para no perder ninguna habilidad.
+  const restantes = [...buckets.keys()]
+    .filter((label) => label !== SKILL_OTHERS && label !== SKILL_SOFT)
+    .sort();
+  for (const label of restantes) {
+    const names = buckets.get(label);
+    if (names?.length) groups.push({ label, names });
+  }
+
   for (const label of [SKILL_OTHERS, SKILL_SOFT]) {
     const names = buckets.get(label);
     if (names?.length) groups.push({ label, names });

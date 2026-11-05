@@ -124,3 +124,23 @@ def test_una_sola_seccion_de_habilidades(cv):
     headings = [item.text for item in build_layout(cv) if item.kind == "heading"]
     assert headings.count("HABILIDADES") == 1
     assert "TECNOLOGÍAS" not in headings
+
+
+def test_categorias_fuera_de_lista_no_se_pierden():
+    """Una skill técnica con categoría rara sigue apareciendo en el CV."""
+    cv = CvData(
+        name="Ana",
+        email="ana@example.com",
+        skills=[
+            {"name": "Comunicación", "type": "tech", "category": "Soft Skills"},
+            {"name": "Inglés", "type": "tech", "category": "Idiomas"},
+            {"name": "Python", "type": "tech", "category": "Lenguajes"},
+        ],
+    )
+    grupos = _skill_groups(cv)
+    etiquetas = [label for label, _ in grupos]
+
+    assert etiquetas == ["Lenguajes", "Idiomas", "Soft Skills"]
+    planas = ", ".join(", ".join(names) for _, names in grupos)
+    for nombre in ("Python", "Comunicación", "Inglés"):
+        assert nombre in planas
