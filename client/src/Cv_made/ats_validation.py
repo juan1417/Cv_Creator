@@ -5,22 +5,13 @@ parser ATS pueda leer el texto. Un DOCX con tablas o imágenes, o un PDF sin
 texto extraíble, se reportan como problema.
 """
 
-import re
-import unicodedata
 from dataclasses import dataclass, field
 from io import BytesIO
 
 from docx import Document
 from pypdf import PdfReader
 
-
-def normalize(text: str) -> str:
-    """Minúsculas, sin acentos y con espacios colapsados."""
-    decomposed = unicodedata.normalize("NFKD", text or "")
-    without_accents = "".join(
-        char for char in decomposed if not unicodedata.combining(char)
-    )
-    return re.sub(r"\s+", " ", without_accents).strip().lower()
+from text_norm import normalize
 
 
 @dataclass

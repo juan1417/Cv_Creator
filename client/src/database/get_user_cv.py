@@ -1,6 +1,9 @@
 from uuid import UUID
 from sqlmodel import Session, select
+from text_norm import normalize
+
 from .DB import get_engine
+from .skill_catalog import category_map
 from models.achievement import Achievement
 from models.cv import CV
 from models.experience import Experience
@@ -54,6 +57,9 @@ def get_user_cv_data(user_id: UUID) -> dict | None:
             select(Language).where(Language.idUser == user_id)
         ).all())
 
+        # La categoría se deriva del catálogo (no se guarda en `skills`).
+        categories = category_map()
+
         return {
             "cv": {
                 "name": cv.name or "",
@@ -75,7 +81,12 @@ def get_user_cv_data(user_id: UUID) -> dict | None:
                 for e in experiences
             ],
             "skills": [
-                {"name": s.name or "", "level": s.level or "", "type": s.type or "tech"}
+                {
+                    "name": s.name or "",
+                    "level": s.level or "",
+                    "type": s.type or "tech",
+                    "category": categories.get(normalize(s.name or ""), ""),
+                }
                 for s in skills
             ],
             "education": [

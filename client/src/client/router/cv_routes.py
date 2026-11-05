@@ -10,6 +10,8 @@ import unicodedata
 
 from database.DB import get_engine
 from database.get_user_cv import get_user_cv_data
+from database.skill_catalog import category_map
+from text_norm import normalize
 from models.user import User
 from models.cv import CV
 from models.experience import Experience
@@ -80,6 +82,7 @@ class SkillResponse(BaseModel):
     name: str
     level: str
     type: str = "tech"
+    category: str = ""
 
 
 class EducationResponse(BaseModel):
@@ -208,6 +211,8 @@ async def get_full_cv(user_id: UUID):
             select(Program).where(Program.idUser == user_id)
         ).all())
 
+        skill_categories = category_map()
+
         languages = list(session.exec(
             select(Language).where(Language.idUser == user_id)
         ).all())
@@ -237,7 +242,13 @@ async def get_full_cv(user_id: UUID):
                 for e in experiences
             ],
             skills=[
-                SkillResponse(id=str(s.id), name=s.name or "", level=s.level or "", type=s.type or "tech")
+                SkillResponse(
+                    id=str(s.id),
+                    name=s.name or "",
+                    level=s.level or "",
+                    type=s.type or "tech",
+                    category=skill_categories.get(normalize(s.name or ""), ""),
+                )
                 for s in skills
             ],
             education=[

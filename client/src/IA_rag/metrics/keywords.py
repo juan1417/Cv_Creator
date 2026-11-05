@@ -6,10 +6,10 @@ completo del CV.
 """
 
 import re
-import unicodedata
 from collections import Counter
 
 from models.cv_analysis import KeywordCoverage
+from text_norm import normalize
 
 # Palabras funcionales y muletillas de las ofertas de empleo. No son keywords:
 # si se contaran, cualquier CV "coincidiría" con cualquier vacante.
@@ -64,15 +64,6 @@ _TOKEN_RE = re.compile(r"[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ][A-Za-z0-9ÁÉÍ
 
 DEFAULT_KEYWORD_LIMIT = 30
 KEYWORD_MAX_SCORE = 25.0
-
-
-def normalize(text: str) -> str:
-    """Minúsculas, sin acentos y con espacios colapsados."""
-    decomposed = unicodedata.normalize("NFKD", text or "")
-    without_accents = "".join(
-        char for char in decomposed if not unicodedata.combining(char)
-    )
-    return re.sub(r"\s+", " ", without_accents).strip().lower()
 
 
 def _is_candidate(key: str) -> bool:

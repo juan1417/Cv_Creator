@@ -3,8 +3,14 @@ from io import BytesIO
 from docx import Document
 from pypdf import PdfReader
 
-from Cv_made import expected_fragments, render_docx, render_pdf, validate_export
-from Cv_made.harvard import format_date
+from Cv_made import (
+    CvData,
+    expected_fragments,
+    render_docx,
+    render_pdf,
+    validate_export,
+)
+from Cv_made.harvard import _skill_groups, build_layout, format_date
 
 
 def test_renderers_return_bytes_not_files(cv, tmp_path):
@@ -68,3 +74,53 @@ def test_validation_detects_missing_fragment(cv):
     result = validate_export(render_docx(cv), "docx", expected)
     assert not result.ok
     assert result.missing == ["Fragmento Inexistente"]
+
+
+# ─── HABILIDADES agrupadas por categoría ──────────────────────────────────────
+
+def _cv_con_categorias() -> CvData:
+    return CvData(
+        name="Ana Pérez",
+        email="ana@example.com",
+        skills=[
+            {"name": "Python", "type": "tech", "category": "Lenguajes"},
+            {"name": "TypeScript", "type": "tech", "category": "Lenguajes"},
+            {"name": "FastAPI", "type": "tech", "category": "Backend"},
+            {"name": ".NET", "type": "tech", "category": ""},
+            {"name": "Comunicación", "type": "soft", "category": "Soft Skills"},
+        ],
+        programs=["Scrum"],
+    )
+
+
+def test_skill_groupsOrdena_por_categoria_y_encaja_lo_desconocido():
+    groups = _skill_groups(_cv_con_categorias())
+
+    etiquetas = [label for label, _ in groups]
+    assert etiquetas == ["Lenguajes", "Backend", "Otros conocimientos", "Habilidades blandas"]
+    assert groups[0][1] == ["Python", "TypeScript"]
+    # lo que no está en el catálogo y los programas comparten línea de rebrote
+    assert groups[2][1] == [".NET", "Scrum"]
+    assert groups[3][1] == ["Comunicación"]
+
+
+def test_habilidades_aparecen_agrupadas_en_docx_y_pdf():
+    cv = _cv_con_categorias()
+    docx_text = "\n".join(
+        p.text for p in Document(BytesIO(render_docx(cv))).paragraphs
+    )
+    pdf_text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(render_pdf(cv))).pages
+    )
+
+    for texto in (docx_text, pdf_text):
+        assert "Lenguajes: Python, TypeScript" in texto
+        assert "Habilidades blandas: Comunicación" in texto
+        # la sección aparte de TECNOLOGÍAS desapareció
+        assert "TECNOLOGÍAS" not in texto
+
+
+def test_una_sola_seccion_de_habilidades(cv):
+    headings = [item.text for item in build_layout(cv) if item.kind == "heading"]
+    assert headings.count("HABILIDADES") == 1
+    assert "TECNOLOGÍAS" not in headings

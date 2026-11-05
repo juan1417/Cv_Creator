@@ -34,6 +34,7 @@ class Skill(BaseModel):
     name: str = ""
     level: str = ""
     type: str = "tech"  # "tech" or "soft"
+    category: str = ""  # derivada del catálogo; vacía si no figura
 
 
 def _date_text(value: Any) -> str:
@@ -118,6 +119,7 @@ class CvData(BaseModel):
                 name=s.get("name", "") or "",
                 level=s.get("level", "") or "",
                 type=s.get("type", "tech") or "tech",
+                category=s.get("category", "") or "",
             )
             for s in cv_data.get("skills", [])
             if (s.get("name") or "").strip()

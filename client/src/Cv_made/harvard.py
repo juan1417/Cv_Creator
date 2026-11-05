@@ -12,6 +12,8 @@ Formato Harvard (resume de una página, A4):
   cargo/institución en itálica debajo, viñetas con ``•``.
 - Sin tablas, imágenes, cuadros de texto, encabezados ni pies: el documento es
   texto plano de una sola columna, legible por un parser ATS.
+- HABILIDADES es una sola sección con una línea por categoría y la etiqueta en
+  negrita; sin columnas reales para no romper la lectura lineal del ATS.
 
 Los renderers devuelven ``bytes`` y nunca escriben en disco.
 """
@@ -63,8 +65,21 @@ SECTION_EDUCATION = "EDUCACIÓN"
 SECTION_EXPERIENCE = "EXPERIENCIA PROFESIONAL"
 SECTION_SKILLS = "HABILIDADES"
 SECTION_ACHIEVEMENTS = "LOGROS DESTACADOS"
-SECTION_PROGRAMS = "TECNOLOGÍAS"
 SECTION_LANGUAGES = "IDIOMAS"
+
+# Orden estable de las líneas de HABILIDADES. Lo que no aparece acá (o no está
+# en el catálogo) cae en "Otros conocimientos"; las blandas siempre al final.
+SKILL_CATEGORY_ORDER: tuple[str, ...] = (
+    "Lenguajes",
+    "Frontend",
+    "Backend",
+    "Bases de Datos",
+    "Datos e IA",
+    "DevOps y Cloud",
+    "Herramientas",
+)
+SKILL_OTHERS = "Otros conocimientos"
+SKILL_SOFT = "Habilidades blandas"
 
 _MONTHS_ES = (
     "ene", "feb", "mar", "abr", "may", "jun",
@@ -155,11 +170,43 @@ def _contact_line(cv: CvData) -> str:
     return " • ".join(part.strip() for part in parts if part and part.strip())
 
 
-def _skills_line(cv: CvData) -> str:
-    ordered = [s for s in cv.skills if (s.type or "tech") != "soft"]
-    ordered += [s for s in cv.skills if (s.type or "tech") == "soft"]
-    chunks = [skill.name.strip() for skill in ordered if skill.name.strip()]
-    return ", ".join(chunks)
+def _skill_groups(cv: CvData) -> list[tuple[str, list[str]]]:
+    """Agrupa habilidades técnicas y programas por categoría, en orden estable.
+
+    El CV muestra una sola sección HABILIDADES con una línea por categoría
+    ("Lenguajes: Python, C#…") en vez de una lista mezclada más una sección
+    "TECNOLOGÍAS" con cosas que no son tecnologías. Se evita un layout de
+    columnas reales: un CV legible por un ATS se lee en una sola columna.
+    """
+    buckets: dict[str, list[str]] = {}
+
+    def add(label: str, name: str) -> None:
+        if name and name not in buckets.setdefault(label, []):
+            buckets[label].append(name)
+
+    for skill in cv.skills:
+        name = skill.name.strip()
+        if not name:
+            continue
+        if (skill.type or "tech") == "soft":
+            add(SKILL_SOFT, name)
+            continue
+        add(skill.category.strip() or SKILL_OTHERS, name)
+
+    # Programas: categoría del catálogo si la tienen; si no, "Otros conocimientos".
+    for program in cv.programs:
+        name = (program or "").strip()
+        if name:
+            add(SKILL_OTHERS, name)
+
+    groups: list[tuple[str, list[str]]] = []
+    for label in SKILL_CATEGORY_ORDER:
+        if buckets.get(label):
+            groups.append((label, buckets.pop(label)))
+    for label in (SKILL_OTHERS, SKILL_SOFT):
+        if buckets.get(label):
+            groups.append((label, buckets.pop(label)))
+    return groups
 
 
 def _languages_line(cv: CvData) -> str:
@@ -221,10 +268,14 @@ def build_layout(cv: CvData) -> list[LayoutItem]:
             for line in _split_lines(experience.description):
                 items.append(LayoutItem(kind="bullet", segments=[(line, False, False)]))
 
-    skills = _skills_line(cv)
-    if skills:
+    skill_groups = _skill_groups(cv)
+    if skill_groups:
         items.append(LayoutItem(kind="heading", text=SECTION_SKILLS))
-        items.append(LayoutItem(kind="text", text=skills))
+        for label, names in skill_groups:
+            items.append(LayoutItem(
+                kind="text",
+                segments=[(f"{label}: ", True, False), (", ".join(names), False, False)],
+            ))
 
     if cv.achievements:
         items.append(LayoutItem(kind="heading", text=SECTION_ACHIEVEMENTS))
@@ -240,13 +291,6 @@ def build_layout(cv: CvData) -> list[LayoutItem]:
                 segments.append((description, False, False))
             if segments:
                 items.append(LayoutItem(kind="bullet", segments=segments))
-
-    if cv.programs:
-        items.append(LayoutItem(kind="heading", text=SECTION_PROGRAMS))
-        items.append(LayoutItem(
-            kind="text",
-            text=", ".join(p.strip() for p in cv.programs if p and p.strip()),
-        ))
 
     languages = _languages_line(cv)
     if languages:
@@ -421,7 +465,14 @@ def render_docx(cv: CvData) -> bytes:
         elif item.kind == "heading":
             _docx_heading(document, item.text)
         elif item.kind == "text":
-            _docx_text_paragraph(document, item.text, space_after=3)
+            if item.segments:
+                paragraph = _docx_text_paragraph(document, "", space_after=3)
+                for text, bold, italic in item.segments:
+                    run = paragraph.add_run(text)
+                    run.bold = bold
+                    run.italic = italic
+            else:
+                _docx_text_paragraph(document, item.text, space_after=3)
         elif item.kind == "entry":
             _docx_entry(document, item.left, item.right)
         elif item.kind == "bullet":
@@ -603,7 +654,8 @@ def render_pdf(cv: CvData) -> bytes:
         elif item.kind == "heading":
             story.extend(_pdf_heading_flowable(item.text, styles["heading"]))
         elif item.kind == "text":
-            story.append(Paragraph(_escape(item.text), styles["body"]))
+            html = _pdf_segments_html(item.segments) if item.segments else _escape(item.text)
+            story.append(Paragraph(html, styles["body"]))
         elif item.kind == "entry":
             left = Paragraph(
                 f"<b>{_escape(item.left)}</b>",

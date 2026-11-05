@@ -1,5 +1,7 @@
 from uuid import UUID
 from sqlmodel import Session, select, col
+from text_norm import normalize
+
 from .DB import get_engine
 from models.skill_catalog import SkillCatalog
 
@@ -152,6 +154,19 @@ def seed_skills() -> int:
                 # Another instance already seeded — ignore
                 inserted = 0
     return inserted
+
+
+def category_map() -> dict[str, str]:
+    """Nombre normalizado → categoría, desde el catálogo de habilidades.
+
+    La categoría de cada skill del CV se deriva acá en vez de guardarse en la
+    tabla `skills`: el proyecto no tiene migraciones, así que agregar una
+    columna requeriría un ALTER TABLE explícito sobre la base existente.
+    """
+    engine = get_engine()
+    with Session(engine) as session:
+        rows = session.exec(select(SkillCatalog.name, SkillCatalog.category)).all()
+    return {normalize(name): category for name, category in rows if name}
 
 
 def search_skills(query: str, limit: int = 20) -> list[dict]:
