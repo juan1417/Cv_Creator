@@ -28,6 +28,16 @@ export function isPersonalProject(company?: string | null): boolean {
   return normalize(company ?? "").includes(PROJECT_MARKER);
 }
 
+/**
+ * La organización sin el marcador, igual que `harvard.project_label`: el
+ * marcador es un mecanismo del layout, no algo que un reclutador deba leer.
+ */
+export function projectLabel(company?: string | null): string {
+  const texto = (company ?? "").replace(/\(\s*proyecto\s+personal\s*\)/gi, " ");
+  const limpio = texto.replace(/\s+/g, " ").trim().replace(/^[\s,;·\-–—]+|[\s,;·\-–—]+$/g, "");
+  return limpio || (company ?? "").trim();
+}
+
 export interface ExperienceSplit {
   jobs: ExperienceResponse[];
   projects: ExperienceResponse[];

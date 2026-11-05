@@ -264,7 +264,8 @@ export default function CVEditPage() {
       </section>
 
       {/* ── Secciones (módulos compartidos con el asistente) ────────────── */}
-      <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Experiencia" subtitle="Puestos, proyectos o freelance" />
+      <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Experiencia laboral" subtitle="Empleos, pasantías y freelance" scope="jobs" />
+      <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Proyectos personales" subtitle="Van en PROYECTOS DESTACADOS del CV exportado" scope="projects" />
       <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="tech" title="Habilidades técnicas"
         subtitle="Van a HABILIDADES del CV, agrupadas por categoría (Lenguajes, Backend, DevOps…)" />
       <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="soft" title="Habilidades blandas"

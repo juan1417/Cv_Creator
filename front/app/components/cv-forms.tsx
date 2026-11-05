@@ -22,6 +22,7 @@ import {
   type SkillCatalogItem,
 } from "@/app/lib/api";
 import { LANGUAGE_LEVELS } from "@/app/lib/cv-constants";
+import { isPersonalProject, projectLabel } from "@/app/lib/cv-experience-split";
 import {
   hasErrors,
   toDateInput,
@@ -80,6 +81,12 @@ interface ManagerProps {
    * refresco en segundo plano lo confirma con el servidor.
    */
   onLocal?: (patch: (cv: FullCV) => FullCV) => void;
+  /**
+   * "jobs" muestra solo empleos, "projects" solo proyectos personales. La base
+   * tiene una única tabla de experiencia, así que la separación la decide el
+   * marcador "proyecto personal" de `cv-experience-split` (espejo de harvard.py).
+   */
+  scope?: "all" | "jobs" | "projects";
 }
 
 type SaveStatus = "idle" | "saving" | "error";
@@ -331,6 +338,7 @@ export function ExperienceManager({
   subtitle,
   plain,
   onLocal,
+  scope = "all",
 }: ManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -366,7 +374,9 @@ export function ExperienceManager({
     if (!item) return;
     setForm({
       title: item.title,
-      company: item.company,
+      // En la tarjeta de proyectos el marcador no se edita: se vuelve a agregar
+      // al guardar, así que acá se muestra el nombre limpio.
+      company: scope === "projects" ? projectLabel(item.company) : item.company,
       start_date: toDateInput(item.start_date),
       end_date: toDateInput(item.end_date),
       description: item.description,
@@ -386,10 +396,14 @@ export function ExperienceManager({
     setStatus("saving");
     setGeneral(undefined);
     try {
+      const company =
+        scope === "projects" && !isPersonalProject(form.company)
+          ? `${form.company.trim()} (proyecto personal)`
+          : form.company.trim();
       const payload = {
         user_id: userId,
         title: form.title.trim(),
-        company: form.company.trim(),
+        company,
         start_date: form.start_date || undefined,
         end_date: form.end_date || undefined,
         description: form.description.trim(),
@@ -448,7 +462,13 @@ export function ExperienceManager({
     }
   };
 
-  const experiences = cv.experiences;
+  const experiences = cv.experiences.filter((item) =>
+    scope === "all"
+      ? true
+      : scope === "projects"
+        ? isPersonalProject(item.company)
+        : !isPersonalProject(item.company),
+  );
 
   return (
     <Card title={title} subtitle={subtitle} plain={plain}>
@@ -470,7 +490,13 @@ export function ExperienceManager({
               onChange={setField("company")}
               error={errors.company}
               placeholder="Acme S.A. · Freelance · Proyecto personal"
-              hint="Si escribís «proyecto personal», se lista en PROYECTOS DESTACADOS"
+              hint={
+                scope === "projects"
+                  ? "Se guarda con «(proyecto personal)» para que vaya en PROYECTOS DESTACADOS"
+                  : scope === "jobs"
+                    ? "Si escribís «proyecto personal» pasa a la tarjeta de proyectos"
+                    : "Si escribís «proyecto personal», se lista en PROYECTOS DESTACADOS"
+              }
               required
             />
             <DateField
@@ -507,7 +533,13 @@ export function ExperienceManager({
         </div>
       ) : (
         <AddRow
-          hint="Puestos, proyectos o freelance: una acción y un resultado concreto"
+          hint={
+            scope === "projects"
+              ? "Tu app, tu library, tu automatización: se lista en PROYECTOS DESTACADOS"
+              : scope === "jobs"
+                ? "Empleos, pasantías y freelance: una acción y un resultado concreto"
+                : "Puestos, proyectos o freelance: una acción y un resultado concreto"
+          }
           onAdd={openCreate}
         />
       )}
@@ -515,14 +547,22 @@ export function ExperienceManager({
       <FormError message={showForm ? undefined : general} />
 
       {experiences.length === 0 && !showForm ? (
-        <EmptyState message="Todavía no tenés experiencia cargada. También podés agregar proyectos personales o freelance." />
+        <EmptyState
+          message={
+            scope === "projects"
+              ? "Todavía no cargaste proyectos personales."
+              : scope === "jobs"
+                ? "Todavía no cargaste empleos ni pasantías. Los proyectos personales van en su propia tarjeta."
+                : "Todavía no tenés experiencia cargada. También podés agregar proyectos personales o freelance."
+          }
+        />
       ) : (
         <div className="space-y-3">
           {experiences.map((item) => (
             <ItemCard
               key={item.id}
               title={item.title}
-              subtitle={item.company}
+              subtitle={scope === "projects" ? projectLabel(item.company) : item.company}
               meta={[
                 toDateInput(item.start_date),
                 toDateInput(item.end_date) || "Actualidad",

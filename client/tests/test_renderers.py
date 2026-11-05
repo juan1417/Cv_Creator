@@ -196,7 +196,7 @@ def test_proyecto_personal_va_en_su_propia_seccion():
 
     # el marcador se lee sin importar mayúsculas/minúsculas
     assert entradas["EXPERIENCIA PROFESIONAL"] == ["Banco XYZ"]
-    assert entradas["PROYECTOS DESTACADOS"] == ["Cv_Creator (Proyecto Personal)"]
+    assert entradas["PROYECTOS DESTACADOS"] == ["Cv_Creator"]
 
 
 def test_el_orden_de_las_secciones_es_experiencia_y_luego_proyectos():
@@ -233,3 +233,31 @@ def test_seccion_de_proyectos_se_ve_en_docx_y_pdf():
     result = validate_export(render_pdf(cv), "pdf", expected_fragments(cv))
     assert result.ok, result.problems
     assert result.missing == []
+
+
+def test_la_organizacion_del_proyecto_se_imprime_sin_el_marcador():
+    """El marcador es un mecanismo del layout, no texto que un reclutador debe leer."""
+    entradas = _entradas_por_seccion(_cv_con_proyecto_y_empleo())
+
+    assert entradas["PROYECTOS DESTACADOS"] == ["Cv_Creator"]
+    # el empleo conserva su organización tal cual la escribió el usuario
+    assert entradas["EXPERIENCIA PROFESIONAL"] == ["Banco XYZ"]
+
+
+def test_marcador_solo_no_deja_la_linea_vacia():
+    """Una organización que es solamente el marcador no puede quedar vacía."""
+    cv = CvData(
+        name="Ana Pérez",
+        email="ana@example.com",
+        experience=[
+            {
+                "company": "Proyecto Personal",
+                "title": "Maquetado",
+                "start_date": "2026-01-01",
+                "end_date": None,
+                "description": "Prueba",
+            }
+        ],
+    )
+
+    assert _entradas_por_seccion(cv)["PROYECTOS DESTACADOS"] == ["Proyecto Personal"]

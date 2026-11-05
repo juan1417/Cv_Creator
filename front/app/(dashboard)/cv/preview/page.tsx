@@ -9,6 +9,7 @@ import { groupSkills } from "@/app/lib/cv-skill-groups";
 import {
   SECTION_EXPERIENCE,
   SECTION_PROJECTS,
+  projectLabel,
   splitExperience,
 } from "@/app/lib/cv-experience-split";
 
@@ -241,7 +242,7 @@ export default function CVPreviewPage() {
           {projects.length > 0 && (
             <Section title={SECTION_PROJECTS}>
               {projects.map((exp, i) => (
-                <ExperienceEntry key={i} exp={exp} />
+                <ExperienceEntry key={i} exp={exp} proyecto />
               ))}
             </Section>
           )}
@@ -308,12 +309,13 @@ export default function CVPreviewPage() {
 }
 
 /** Una entrada de experiencia o proyecto: organización, fechas, cargo y viñetas. */
-function ExperienceEntry({ exp }: { exp: ExperienceResponse }) {
+function ExperienceEntry({ exp, proyecto = false }: { exp: ExperienceResponse; proyecto?: boolean }) {
+  const organizacion = proyecto ? projectLabel(exp.company) : exp.company;
   return (
     <div className="mb-3 cv-entry">
       <div className="flex justify-between items-baseline">
         <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
-          {exp.company}
+          {organizacion}
         </span>
         <span style={{ fontSize: SIZE.date, color: COLOR, fontFamily: FONT, whiteSpace: "nowrap", marginLeft: "12px" }}>
           {formatDateRange(exp.start_date, exp.end_date)}

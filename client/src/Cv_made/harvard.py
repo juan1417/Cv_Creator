@@ -161,6 +161,18 @@ def split_experience(experience) -> tuple[list, list]:
     projects = [e for e in experience if is_personal_project(e.company)]
     return jobs, projects
 
+
+def project_label(company: str | None) -> str:
+    """La organización sin el marcador: "Cv_Creator (proyecto personal)" → "Cv_Creator".
+
+    El marcador es un mecanismo del layout, no texto que un reclutador deba leer;
+    si la organización era solamente el marcador se conserva entero para no dejar
+    la línea vacía.
+    """
+    texto = re.sub(r"\(\s*proyecto\s+personal\s*\)", " ", company or "", flags=re.I)
+    limpio = re.sub(r"\s+", " ", texto).strip(" ,;·-–—")
+    return limpio or (company or "").strip()
+
 LayoutKind = Literal["name", "contact", "heading", "text", "entry", "bullet", "spacer"]
 
 
@@ -292,17 +304,18 @@ def build_layout(cv: CvData) -> list[LayoutItem]:
 
     if cv.experience:
         jobs, projects = split_experience(cv.experience)
-        for entries, heading in (
-            (jobs, SECTION_EXPERIENCE),
-            (projects, SECTION_PROJECTS),
+        for entries, heading, proyecto in (
+            (jobs, SECTION_EXPERIENCE, False),
+            (projects, SECTION_PROJECTS, True),
         ):
             if not entries:
                 continue
             items.append(LayoutItem(kind="heading", text=heading))
             for experience in entries:
+                organizacion = (experience.company or "").strip()
                 items.append(LayoutItem(
                     kind="entry",
-                    left=(experience.company or "").strip(),
+                    left=project_label(organizacion) if proyecto else organizacion,
                     right=format_date(experience.start_date, experience.end_date),
                 ))
                 title = (experience.title or "").strip()
