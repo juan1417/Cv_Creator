@@ -12,6 +12,7 @@ Branch: `feat/ats-harvard-export` · Delivery: single PR (feature branch) · Tes
 - **S6** — La versión adaptada al puesto se genera como archivo separado (sufijo `_adapted`), sin sobrescribir el CV base.
 - **S7** — El export no escribe archivos en `client/output/`: los renderers devuelven `bytes`.
 - **S8** — El CV separa experiencia laboral de proyectos personales: los proyectos se listan bajo `PROYECTOS DESTACADOS`, el empleo bajo `EXPERIENCIA PROFESIONAL`, y cada encabezado se imprime solo si tiene entradas.
+- **S11** — La pantalla de edición también separa empleos de proyectos personales (dos tarjetas) y el marcador «proyecto personal» no puede aparecer ni en el editor ni en el archivo exportado: es plumbing del layout, no texto del CV.
 - **S10** — Imprimir la vista previa desde el navegador tiene que dar **una sola hoja A4** y no puede mostrar el nombre de la app ni la URL del servidor como marca de agua.
 - **S9** — El marcador es el texto `proyecto personal` en el campo organización, comparado normalizado (minúsculas, sin acentos, espacios colapsados). No se agrega una columna `tipo` porque el proyecto no usa migraciones. La regla queda espejada entre `client/src/Cv_made/harvard.py` y `front/app/lib/cv-experience-split.ts`, igual que las categorías de habilidades.
 
@@ -30,6 +31,7 @@ Branch: `feat/ats-harvard-export` · Delivery: single PR (feature branch) · Tes
 | T9 | S8,S9 | inline | done | 2ee2f4b |
 | T10 | S10 | inline | done | f78d87d |
 | T11 | S10 | inline | done | 7c80b7b |
+| T12 | S8,S9,S11 | inline | done | 28b8426 |
 
 - **T1** — Modelo único de exportación: `CvData` con `skills: list[Skill]`, `from_db()`, y `get_user_cv_data()` completo (achievements, programs, languages, skill.type).
 - **T2** — Motor ATS determinista: `metrics/keywords.py` + reescritura de `metrics/ats.py`, `KeywordCoverage` en `models/cv_analysis.py`, cableado en `cv_analyzer`.
@@ -74,3 +76,6 @@ Branch: `feat/ats-harvard-export` · Delivery: single PR (feature branch) · Tes
 - **L30 (2026-11-05, pedido del usuario, verbatim):** "sigue con los mismo tanto en la cabezara como el la parate de abajo cuando intento descargar el pdf".
 - **L31 (2026-11-05, diagnóstico y fix):** la cabecera ("CV — Juan…", la URL de localhost, la fecha y "1 of 1") es el **encabezado/pie de Chrome**, no la app: ninguna hoja de estilo lo apaga, es una casilla del diálogo de impresión ("Encabezados y pies de página"). La vista previa además solo ofrecía `window.print()`, así que no existía forma limpia de bajar el archivo. Se agregaron **Descargar PDF** y **Descargar DOCX** (`exportCV`, la misma ruta de `/cv/generate`) y se dejó "Imprimir" aparte. Evidencia con Playwright sobre el dev server: el PDF descargado = **1 página**, 2032 caracteres extraíbles, sin `localhost`, sin `CV Creator`, sin `1 of 1`; DOCX con 0 tablas y 0 imágenes; el print sigue en 1 página. Commit 7c80b7b.
 - **L32 (2026-11-05, RDD):** assess del slice `d99f158..7c80b7b` → {"risk": "medium", "review_due": false, "review_due_reason": "under_budget", "changed_paths": 6, "changed_lines": 386}.
+- **L33 (2026-11-05, pedido del usuario, verbatim):** "puedes separa lo de la experiencia con los proyectos personales" (reiterado: el export aún no lo mostraba porque el proceso `uv run client` del usuario corre código anterior a `2ee2f4b`).
+- **L34 (2026-11-05, evidencia):** test-first con ROJO previo (`test_la_organizacion_del_proyecto_se_imprime_sin_el_marcador` y `test_marcador_solo_no_deja_la_linea_vacia` fallando) → `uv run pytest` **52 passed**. `ExperienceManager` recibe `scope` ("jobs" | "projects" | "all") sobre la MISMA tabla: /cv/edit monta "Experiencia laboral" y "Proyectos personales", muestra y edita el nombre limpio y re-agrega el marcador al guardar. `project_label` (espejo en `cv-experience-split.ts`) lo saca también del DOCX/PDF. Playwright sobre el dev server: Data Hack queda en la tarjeta de empleo, Cv_Creator y ProFinancas en la de proyectos, y el texto "proyecto personal" no aparece ni en el editor ni en la vista previa; el PDF del renderer nuevo sale en **1 página** con las dos secciones y organizaciones limpias. `tsc` 0 errores, `lint` 0 errores (2 warnings preexistentes), `next build` OK.
+- **L35 (2026-11-05, RDD):** assess del slice acumulado → risk medium, review_due False (under_budget), 498 líneas en 7 paths.
