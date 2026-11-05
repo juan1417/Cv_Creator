@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth";
-import { getFullCV } from "@/app/lib/api";
-import type { ExperienceResponse, FullCV } from "@/app/lib/types";
+import { getFullCV, exportCV, apiErrorMessage } from "@/app/lib/api";
+import type { ExperienceResponse, ExportFormat, FullCV } from "@/app/lib/types";
 import { groupSkills } from "@/app/lib/cv-skill-groups";
 import {
   SECTION_EXPERIENCE,
@@ -28,6 +28,8 @@ export default function CVPreviewPage() {
   const router = useRouter();
   const [cv, setCV] = useState<FullCV | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<ExportFormat | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -42,6 +44,24 @@ export default function CVPreviewPage() {
       .finally(() => setLoading(false));
   }, [user]);
 
+  /**
+   * El archivo lo genera el backend (Harvard, A4, una columna): a diferencia de
+   * imprimir la página, acá no entra el encabezado ni el pie que agrega el
+   * navegador.
+   */
+  const handleExport = async (format: ExportFormat) => {
+    if (!user || downloading) return;
+    setDownloading(format);
+    setDownloadError(null);
+    try {
+      await exportCV({ user_id: user.id, format });
+    } catch (e) {
+      setDownloadError(apiErrorMessage(e, "No se pudo generar el archivo."));
+    } finally {
+      setDownloading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -49,7 +69,6 @@ export default function CVPreviewPage() {
       </div>
     );
   }
-
   if (!cv) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -106,13 +125,38 @@ export default function CVPreviewPage() {
           </svg>
           Volver a Editar
         </button>
-        <button
-          onClick={() => window.print()}
-          className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all"
-        >
-          Imprimir / Guardar PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleExport("pdf")}
+            disabled={downloading !== null}
+            className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {downloading === "pdf" ? "Generando..." : "Descargar PDF"}
+          </button>
+          <button
+            onClick={() => handleExport("docx")}
+            disabled={downloading !== null}
+            className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-indigo-500/30 hover:text-white transition-all disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {downloading === "docx" ? "Generando..." : "Descargar DOCX"}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-all"
+          >
+            Imprimir
+          </button>
+        </div>
       </div>
+
+      {downloadError && (
+        <p className="-mt-4 mb-4 text-xs text-red-400 no-print">{downloadError}</p>
+      )}
+      <p className="-mt-4 mb-6 text-xs text-zinc-500 no-print">
+        «Descargar» genera el archivo en el servidor: una hoja y sin el encabezado
+        ni la URL que el navegador agrega al imprimir. Si elegís «Imprimir»,
+        desactivá “Encabezados y pies de página” en el diálogo de Chrome.
+      </p>
 
       {/* CV Document */}
       <div className="bg-white shadow-xl rounded-lg overflow-hidden print:shadow-none print:rounded-none">
