@@ -58,24 +58,29 @@ export function groupSkills(
   }
 
   const groups: SkillGroup[] = [];
-  for (const label of SKILL_CATEGORY_ORDER) {
+
+  // Cada categoría se emite UNA sola vez: al imprimirla se saca del mapa, si
+  // no los bucles siguientes la vuelven a agregar (ese fue el bug que duplicó
+  // las líneas en la vista previa).
+  const emit = (label: string) => {
     const names = buckets.get(label);
-    if (names?.length) groups.push({ label, names });
-  }
+    if (names?.length) {
+      groups.push({ label, names });
+      buckets.delete(label);
+    }
+  };
+
+  for (const label of SKILL_CATEGORY_ORDER) emit(label);
 
   // Categorías fuera de la lista canónica ("Soft Skills", "Idiomas", ...):
   // se muestran igual, ordenadas, para no perder ninguna habilidad.
   const restantes = [...buckets.keys()]
     .filter((label) => label !== SKILL_OTHERS && label !== SKILL_SOFT)
     .sort();
-  for (const label of restantes) {
-    const names = buckets.get(label);
-    if (names?.length) groups.push({ label, names });
-  }
+  for (const label of restantes) emit(label);
 
-  for (const label of [SKILL_OTHERS, SKILL_SOFT]) {
-    const names = buckets.get(label);
-    if (names?.length) groups.push({ label, names });
-  }
+  emit(SKILL_OTHERS);
+  emit(SKILL_SOFT);
+
   return groups;
 }
