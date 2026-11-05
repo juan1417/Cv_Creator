@@ -14,13 +14,23 @@ dependencies = [
     "openai>=3.8.0",
     "prefect>=3.8.5",
     "psycopg2>=2.9.12",
+    "pypdf>=5.0.0",
     "python-docx>=1.2.0",
     "reportlab>=5.0.1",
     "sqlmodel>=0.0.42",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
 [project.scripts]
 client = "client:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
 
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]

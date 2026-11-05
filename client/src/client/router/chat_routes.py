@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
@@ -7,6 +7,7 @@ import asyncio
 
 from database.DB import get_engine
 from models.chat import ChatSession, ChatMessage
+from IA_rag.generator import RateLimitError
 from IA_rag.orchestrator import chat as rag_chat
 from IA_rag.cv_analyzer import analyze_cv
 from IA_rag.cv_editor import (
@@ -146,6 +147,8 @@ async def send_message(session_id: UUID, req: SendMessageRequest):
             session_id=session_id,
         )
         return ChatResponse(**result)
+    except RateLimitError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
         msg = str(e)
         if "no encontrada" in msg or "CV" in msg:
@@ -241,20 +244,23 @@ async def delete_session(session_id: UUID, user_id: UUID):
         return {"message": "Sesion eliminada correctamente"}
 
 
-@router.post("/cv-analysis", response_model=CVAnalysis)
-async def cv_analysis(user_id: UUID, sections: list[str] | None = None):
-    """
-    Analiza el CV. Si se envía 'sections', solo re-analiza esas secciones
-    y usa cache para el resto.
+class CVAnalysisRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-    Secciones válidas: personal, experience, education, skills, languages
+    job_description: str | None = None
+
+
+@router.post("/cv-analysis", response_model=CVAnalysis)
+async def cv_analysis(user_id: UUID, req: CVAnalysisRequest | None = None):
+    """
+    Analiza el CV con métricas deterministas.
+
+    Si se envía 'job_description', la compatibilidad ATS incluye la cobertura
+    de palabras clave de la vacante.
     """
     try:
-        valid_sections = {"personal", "experience", "education", "skills", "languages"}
-        if sections is not None:
-            sections = [s for s in sections if s in valid_sections]
-
-        result = await asyncio.to_thread(analyze_cv, user_id, sections)
+        job_description = req.job_description if req else None
+        result = await asyncio.to_thread(analyze_cv, user_id, job_description)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -297,6 +303,11 @@ async def edit_cv_field(req: UpdateCVFieldRequest):
 async def create_experience(req: AddExperienceRequest):
     _verify_cv_ownership(req.user_id)
 
+    if not (req.start_date or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de inicio es obligatoria",
+        )
     data = {
         "title": req.title,
         "company": req.company,
@@ -325,6 +336,11 @@ async def edit_experience(experience_id: UUID, req: UpdateExperienceRequest):
     if req.company is not None:
         data["company"] = req.company
     if req.start_date is not None:
+        if not req.start_date.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="La fecha de inicio es obligatoria",
+            )
         data["start_date"] = req.start_date
     if req.end_date is not None:
         data["end_date"] = req.end_date
@@ -391,6 +407,11 @@ async def remove_skill(skill_id: UUID, user_id: UUID):
 async def create_education(req: AddEducationRequest):
     _verify_cv_ownership(req.user_id)
 
+    if not (req.start_date or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha de inicio es obligatoria",
+        )
     data = {
         "degree": req.degree,
         "institution": req.institution,

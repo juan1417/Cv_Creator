@@ -1,37 +1,21 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
+
 import { useAuth } from "@/app/lib/auth";
+import { apiErrorMessage, getFullCV, updateCV } from "@/app/lib/api";
+import type { FullCV } from "@/app/lib/types";
+
 import {
-  getFullCV,
-  updateCV,
-  addExperience,
-  updateExperience,
-  deleteExperience,
-  addSkill,
-  deleteSkill,
-  addEducation,
-  deleteEducation,
-  searchSkillCatalog,
-  addCustomSkillCatalog,
-  addAchievement,
-  deleteAchievement,
-  addProgram,
-  deleteProgram,
-  addLanguage,
-  deleteLanguage,
-} from "@/app/lib/api";
-import type {
-  FullCV,
-  ExperienceResponse,
-  SkillResponse,
-  EducationResponse,
-  AchievementResponse,
-  ProgramResponse,
-  LanguageResponse,
-} from "@/app/lib/types";
-import type { SkillCatalogItem } from "@/app/lib/api";
-import { markSectionDirty } from "@/app/lib/dirty-sections";
+  AchievementManager,
+  EducationManager,
+  ExperienceManager,
+  LanguagePicker,
+  PersonalFields,
+  ProgramPicker,
+  SkillPicker,
+} from "@/app/components/cv-forms";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -45,11 +29,34 @@ function Spinner() {
 
 function useDebounce(fn: () => void, ms: number) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const latest = useRef(fn);
+
+  // El timer siempre ejecuta la versión más nueva de `fn`: si cerrara sobre la
+  // función de la tecla que lo programó, se guardaría el valor anterior a la
+  // última tecla tipeada.
+  useEffect(() => {
+    latest.current = fn;
+  });
+
+  // Al desmontar, lo que quedó pendiente se envía en vez de descartarse:
+  // salir antes de los `ms` milisegundos no pierde la última edición.
+  useEffect(() => {
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+        latest.current();
+      }
+    };
+  }, []);
+
   return useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => fn(), ms);
-  }, [fn, ms]);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      latest.current();
+    }, ms);
+  }, [ms]);
 }
 
 type SaveStatus = "idle" | "saving" | "saved";
@@ -76,6 +83,7 @@ export default function CVEditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [dirty, setDirty] = useState(false);
 
   // Personal info form
   const [name, setName] = useState("");
@@ -88,6 +96,16 @@ export default function CVEditPage() {
 
   // Track if form is initialized
   const initialized = useRef(false);
+
+  const personalSetters = {
+    name: setName,
+    email: setEmail,
+    phone: setPhone,
+    address: setAddress,
+    about: setAbout,
+    porfolio: setPorfolio,
+    linkedin: setLinkedin,
+  } as const;
 
   const fetchCV = useCallback(async () => {
     if (!user) return;
@@ -111,6 +129,25 @@ export default function CVEditPage() {
     }
   }, [user]);
 
+  // Cambio optimista: se muestra al instante y el refresco lo confirma.
+  const patchCv = useCallback((patch: (current: FullCV) => FullCV) => {
+    setCv((prev) => (prev ? patch(prev) : prev));
+  }, []);
+
+  // Refresco tras guardar: actualiza la lista sin mostrar el spinner y sin
+  // pisar los campos que el usuario pueda estar escribiendo en este momento.
+  const refreshCV = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await getFullCV(user.id);
+      setCv(data);
+      setError(null);
+    } catch (e) {
+      // El estado local sigue siendo válido: se avisa sin desmontar la página.
+      setError(e instanceof Error ? e.message : "No se pudo actualizar el CV");
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchCV();
   }, [fetchCV]);
@@ -118,7 +155,7 @@ export default function CVEditPage() {
   // ── Auto-save personal info ──────────────────────────────────────────
 
   const doSavePersonal = useCallback(async () => {
-    if (!user || !initialized.current) return;
+    if (!user || !initialized.current || !dirty) return;
     setSaveStatus("saving");
     try {
       const updated = await updateCV(user.id, {
@@ -131,21 +168,24 @@ export default function CVEditPage() {
         linkedin,
       });
       setCv((prev) => (prev ? { ...prev, cv: updated } : prev));
+      setDirty(false);
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
-    } catch {
+    } catch (e) {
       setSaveStatus("idle");
+      setError(apiErrorMessage(e, "No se pudieron guardar tus datos"));
     }
-  }, [user, name, email, phone, address, about, porfolio, linkedin]);
+  }, [user, dirty, name, email, phone, address, about, porfolio, linkedin]);
 
   const autoSavePersonal = useDebounce(doSavePersonal, 1000);
+
 
   const handleChange = <T extends React.Dispatch<React.SetStateAction<string>>>(
     setter: T,
     value: string,
   ) => {
+    setDirty(true);
     setter(value);
-    markSectionDirty("personal");
     autoSavePersonal();
   };
 
@@ -165,6 +205,8 @@ export default function CVEditPage() {
     );
   }
 
+
+  if (!cv) return null;
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -174,17 +216,25 @@ export default function CVEditPage() {
           </h1>
           <SaveIndicator status={saveStatus} />
         </div>
-        <a
-          href="/cv/preview"
-          target="_blank"
-          className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-[#0F172A]"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-          Vista Previa
-        </a>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/cv/create"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-[#0F172A]"
+          >
+            Crear con el asistente
+          </Link>
+          <a
+            href="/cv/preview"
+            target="_blank"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:border-[#6366F1]/30 hover:bg-[#0F172A]"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Vista Previa
+          </a>
+        </div>
       </div>
 
       {error && (
@@ -198,973 +248,33 @@ export default function CVEditPage() {
 
       {/* ── Personal Info ─────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
-        <h2 className="mb-4 text-lg font-semibold text-[#F1F5F9]">
-          Información Personal
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Nombre" value={name} onChange={(v) => handleChange(setName, v)} />
-          <Field label="Email" value={email} onChange={(v) => handleChange(setEmail, v)} type="email" />
-          <Field label="Teléfono" value={phone} onChange={(v) => handleChange(setPhone, v)} />
-          <Field label="Dirección" value={address} onChange={(v) => handleChange(setAddress, v)} />
-          <Field label="Portfolio" value={porfolio} onChange={(v) => handleChange(setPorfolio, v)} placeholder="https://..." />
-          <Field label="LinkedIn" value={linkedin} onChange={(v) => handleChange(setLinkedin, v)} placeholder="https://linkedin.com/in/..." />
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="text-lg font-semibold text-[#F1F5F9]">
+            Información Personal
+          </h2>
+          <span className="text-xs text-[#64748B]">Se guarda solo mientras escribís</span>
         </div>
-        <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-            Sobre mí
-          </label>
-          <textarea
-            value={about}
-            onChange={(e) => handleChange(setAbout, e.target.value)}
-            rows={4}
-            className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-          />
-        </div>
+        <PersonalFields
+          value={{ name, email, phone, address, about, porfolio, linkedin }}
+          onChange={(key, value) => handleChange(personalSetters[key], value)}
+          onBlur={() => {
+            if (dirty) void doSavePersonal();
+          }}
+        />
       </section>
 
-      {/* ── Experiences ───────────────────────────────────────────────── */}
-      <ExperiencesSection
-        experiences={cv?.experiences ?? []}
-        userId={user!.id}
-        onChanged={fetchCV}
-      />
-
-      {/* ── Tecnologías (tech skills) ─────────────────────────────────── */}
-      <SkillsSection
-        title="Tecnologías"
-        subtitle="Lenguajes, frameworks y herramientas técnicas"
-        skillType="tech"
-        placeholder="Escribí para buscar: React, Python, SQL..."
-        skills={cv?.skills ?? []}
-        userId={user!.id}
-        onChanged={fetchCV}
-      />
-
-      {/* ── Skills Adicionales (soft skills) ──────────────────────────── */}
-      <SkillsSection
-        title="Skills Adicionales"
-        subtitle="Habilidades blandas y competencias"
-        skillType="soft"
-        placeholder="Escribí para buscar: Liderazgo, Comunicación..."
-        skills={cv?.skills ?? []}
-        userId={user!.id}
-        onChanged={fetchCV}
-      />
-
-      {/* ── Education ─────────────────────────────────────────────────── */}
-      <EducationSection
-        education={cv?.education ?? []}
-        userId={user!.id}
-        onChanged={fetchCV}
-      />
-
-      {/* ── Logros Destacados ──────────────────────────────────────────── */}
-      <AchievementsSection
-        achievements={cv?.achievements ?? []}
-        userId={user!.id}
-        onChanged={fetchCV}
-      />
-
-      {/* ── Programas ──────────────────────────────────────────────────── */}
-      <ProgramsSection
-        programs={cv?.programs ?? []}
-        userId={user!.id}
-        onChanged={fetchCV}
-      />
-
-      {/* ── Idiomas ────────────────────────────────────────────────────── */}
-      <LanguagesSection
-        languages={cv?.languages ?? []}
-        userId={user!.id}
-        onChanged={fetchCV}
-      />
+      {/* ── Secciones (módulos compartidos con el asistente) ────────────── */}
+      <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Experiencia laboral" subtitle="Empleos, pasantías y freelance" scope="jobs" />
+      <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Proyectos personales" subtitle="Van en PROYECTOS DESTACADOS del CV exportado" scope="projects" />
+      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="tech" title="Habilidades técnicas"
+        subtitle="Van a HABILIDADES del CV, agrupadas por categoría (Lenguajes, Backend, DevOps…)" />
+      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="soft" title="Habilidades blandas"
+        subtitle="Aparecen al final de HABILIDADES, en su propia línea" />
+      <EducationManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Formación" subtitle="Carreras, tecnicaturas y certificaciones" />
+      <AchievementManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Logros Destacados" subtitle="Premios, publicaciones y proyectos propios" />
+      <ProgramPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Programas y metodologías"
+        subtitle="También viven en HABILIDADES, bajo «Otros conocimientos»" />
+      <LanguagePicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Idiomas" subtitle="Nivel con estándar europeo si lo tenés" />
     </div>
-  );
-}
-
-// ─── Reusable Field ──────────────────────────────────────────────────────────
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-        {label}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-      />
-    </div>
-  );
-}
-
-// ─── Experiences Section ─────────────────────────────────────────────────────
-
-function ExperiencesSection({
-  experiences,
-  userId,
-  onChanged,
-}: {
-  experiences: ExperienceResponse[];
-  userId: string;
-  onChanged: () => void;
-}) {
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [company, setCompany] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const resetForm = () => {
-    setTitle("");
-    setCompany("");
-    setStartDate("");
-    setEndDate("");
-    setDescription("");
-    setEditId(null);
-    setShowForm(false);
-  };
-
-  const openEdit = (exp: ExperienceResponse) => {
-    setTitle(exp.title);
-    setCompany(exp.company);
-    setStartDate(exp.start_date ?? "");
-    setEndDate(exp.end_date ?? "");
-    setDescription(exp.description);
-    setEditId(exp.id);
-    setShowForm(true);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      if (editId) {
-        await updateExperience(editId, {
-          user_id: userId,
-          title,
-          company,
-          start_date: startDate || undefined,
-          end_date: endDate || undefined,
-          description,
-        });
-      } else {
-        await addExperience({
-          user_id: userId,
-          title,
-          company,
-          start_date: startDate || undefined,
-          end_date: endDate || undefined,
-          description,
-        });
-      }
-      resetForm();
-      onChanged();
-      markSectionDirty("experience");
-    } catch {
-      // error handled by parent refresh
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteExperience(id, userId);
-    markSectionDirty("experience");
-    onChanged();
-  };
-
-  return (
-    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#F1F5F9]">
-          Experiencia
-        </h2>
-        <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
-        >
-          + Agregar experiencia
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Título" value={title} onChange={setTitle} />
-            <Field label="Empresa" value={company} onChange={setCompany} />
-            <Field label="Fecha inicio" value={startDate} onChange={setStartDate} type="date" />
-            <Field label="Fecha fin" value={endDate} onChange={setEndDate} type="date" />
-          </div>
-          <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-              Descripción
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-            />
-          </div>
-          <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
-              Cancelar
-            </button>
-            <button onClick={handleSave} disabled={saving} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
-              {saving ? "Guardando..." : editId ? "Actualizar" : "Agregar"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {experiences.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-[#94A3B8]">
-          No hay experiencias registradas.
-        </p>
-      )}
-
-      <div className="space-y-3">
-        {experiences.map((exp) => (
-          <div
-            key={exp.id}
-            className="flex items-start justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-[#F8FAFC]">{exp.title}</p>
-              <p className="text-sm text-[#94A3B8]">{exp.company}</p>
-              <p className="mt-1 text-xs text-[#64748B]">
-                {exp.start_date ?? "—"} — {exp.end_date ?? "Presente"}
-              </p>
-              {exp.description && (
-                <p className="mt-2 text-sm text-[#94A3B8]">{exp.description}</p>
-              )}
-            </div>
-            <div className="ml-4 flex gap-2">
-              <button onClick={() => openEdit(exp)} className="rounded px-2 py-1 text-xs font-medium text-[#6366F1] transition-all duration-200 hover:bg-[#6366F1]/10">
-                Editar
-              </button>
-              <button onClick={() => handleDelete(exp.id)} className="rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
-                Eliminar
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ─── Skills Section (with catalog search) ────────────────────────────────────
-
-const LEVELS = ["Básico", "Intermedio", "Avanzado", "Experto"];
-
-function SkillsSection({
-  title,
-  subtitle,
-  skillType,
-  placeholder,
-  skills,
-  userId,
-  onChanged,
-}: {
-  title: string;
-  subtitle: string;
-  skillType: "tech" | "soft";
-  placeholder: string;
-  skills: SkillResponse[];
-  userId: string;
-  onChanged: () => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [level, setLevel] = useState("Intermedio");
-  const [saving, setSaving] = useState(false);
-  const [suggestions, setSuggestions] = useState<SkillCatalogItem[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightIdx, setHighlightIdx] = useState(-1);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Only show skills of this section's type
-  const typedSkills = skills.filter((s) => (s.type || "tech") === skillType);
-
-  // Close suggestions on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const searchCatalog = (q: string) => {
-    setQuery(q);
-    setHighlightIdx(-1);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (q.trim().length < 1) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    searchTimer.current = setTimeout(async () => {
-      try {
-        const data = await searchSkillCatalog(q);
-        setSuggestions(data.results);
-        setShowSuggestions(data.results.length > 0);
-      } catch {
-        setSuggestions([]);
-      }
-    }, 200);
-  };
-
-  const selectSuggestion = (item: SkillCatalogItem) => {
-    setQuery(item.name);
-    setShowSuggestions(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSuggestions || suggestions.length === 0) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleAdd();
-      }
-      return;
-    }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightIdx((i) => (i < suggestions.length - 1 ? i + 1 : 0));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightIdx((i) => (i > 0 ? i - 1 : suggestions.length - 1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (highlightIdx >= 0 && highlightIdx < suggestions.length) {
-        selectSuggestion(suggestions[highlightIdx]);
-      } else {
-        handleAdd();
-      }
-    } else if (e.key === "Escape") {
-      setShowSuggestions(false);
-    }
-  };
-
-  const handleAdd = async () => {
-    if (!query.trim()) return;
-    setSaving(true);
-    try {
-      // Check if skill already exists in this section
-      const existing = typedSkills.find(
-        (s) => s.name.toLowerCase() === query.trim().toLowerCase(),
-      );
-      if (existing) {
-        setSaving(false);
-        return;
-      }
-
-      await addSkill({ user_id: userId, name: query.trim(), level, type: skillType });
-      setQuery("");
-      setLevel("Intermedio");
-      setShowSuggestions(false);
-      markSectionDirty("skills");
-      onChanged();
-    } catch {
-      // handled by parent
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteSkill(id, userId);
-    markSectionDirty("skills");
-    onChanged();
-  };
-
-  // Filter out already-added skills from suggestions
-  const filteredSuggestions = suggestions.filter(
-    (s) => !typedSkills.some((sk) => sk.name.toLowerCase() === s.name.toLowerCase()),
-  );
-
-  return (
-    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-[#F1F5F9]">
-          {title}
-        </h2>
-        <p className="text-sm text-[#94A3B8]">{subtitle}</p>
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-end gap-2">
-        <div className="flex-1 min-w-[200px] relative" ref={wrapperRef}>
-          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-            Nueva skill
-          </label>
-          <input
-            value={query}
-            onChange={(e) => searchCatalog(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => query.trim().length >= 1 && suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder={placeholder}
-            className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-          />
-          {showSuggestions && filteredSuggestions.length > 0 && (
-            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-[#334155] bg-[#1E293B] shadow-2xl backdrop-blur-sm">
-              {filteredSuggestions.map((item, idx) => (
-                <button
-                  key={item.id}
-                  onMouseDown={() => selectSuggestion(item)}
-                  className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-all duration-150 hover:bg-[#6366F1]/10 ${
-                    idx === highlightIdx ? "bg-[#6366F1]/10" : ""
-                  }`}
-                >
-                  <span className="text-[#F8FAFC]">{item.name}</span>
-                  <span className="text-xs text-[#64748B]">
-                    {item.category}
-                  </span>
-                </button>
-              ))}
-              {!typedSkills.some(
-                (s) => s.name.toLowerCase() === query.trim().toLowerCase(),
-              ) && query.trim().length > 0 && (
-                <button
-                  onMouseDown={handleAdd}
-                  className="flex w-full items-center gap-2 border-t border-[#334155] px-4 py-2.5 text-left text-sm text-[#6366F1] transition-all duration-150 hover:bg-[#6366F1]/10"
-                >
-                  <span>+</span>
-                  <span>Crear &quot;{query.trim()}&quot;</span>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-            Nivel
-          </label>
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-          >
-            {LEVELS.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-        </div>
-        <button
-          onClick={handleAdd}
-          disabled={saving || !query.trim()}
-          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40 disabled:opacity-50 disabled:shadow-none"
-        >
-          {saving ? "Agregando..." : "Agregar"}
-        </button>
-      </div>
-
-      {typedSkills.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[#94A3B8]">
-          No hay {title.toLowerCase()} registradas.
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {typedSkills.map((skill) => (
-            <span
-              key={skill.id}
-              className="inline-flex items-center gap-2 rounded-full border border-[#334155] bg-[#0F172A] px-3 py-1.5 text-sm transition-all duration-200 hover:border-[#6366F1]/20"
-            >
-              <span className="text-[#F8FAFC]">{skill.name}</span>
-              <span className="text-xs text-[#64748B]">{skill.level}</span>
-              <button
-                onClick={() => handleDelete(skill.id)}
-                className="ml-1 text-[#64748B] transition-all duration-200 hover:text-[#EF4444]"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ─── Education Section ───────────────────────────────────────────────────────
-
-function EducationSection({
-  education,
-  userId,
-  onChanged,
-}: {
-  education: EducationResponse[];
-  userId: string;
-  onChanged: () => void;
-}) {
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [degree, setDegree] = useState("");
-  const [institution, setInstitution] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const resetForm = () => {
-    setDegree("");
-    setInstitution("");
-    setStartDate("");
-    setEndDate("");
-    setDescription("");
-    setEditId(null);
-    setShowForm(false);
-  };
-
-  const openEdit = (edu: EducationResponse) => {
-    setDegree(edu.degree);
-    setInstitution(edu.institution);
-    setStartDate(edu.start_date ?? "");
-    setEndDate(edu.end_date ?? "");
-    setDescription(edu.description);
-    setEditId(edu.id);
-    setShowForm(true);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      if (editId) {
-        await deleteEducation(editId, userId);
-      }
-      await addEducation({
-        user_id: userId,
-        degree,
-        institution,
-        start_date: startDate || undefined,
-        end_date: endDate || undefined,
-        description,
-      });
-      resetForm();
-      markSectionDirty("education");
-      onChanged();
-    } catch {
-      // handled by parent
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteEducation(id, userId);
-    markSectionDirty("education");
-    onChanged();
-  };
-
-  return (
-    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#F1F5F9]">
-          Formación
-        </h2>
-        <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
-        >
-          + Agregar formación
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Título" value={degree} onChange={setDegree} />
-            <Field label="Institución" value={institution} onChange={setInstitution} />
-            <Field label="Fecha inicio" value={startDate} onChange={setStartDate} type="date" />
-            <Field label="Fecha fin" value={endDate} onChange={setEndDate} type="date" />
-          </div>
-          <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-              Descripción
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-            />
-          </div>
-          <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
-              Cancelar
-            </button>
-            <button onClick={handleSave} disabled={saving} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
-              {saving ? "Guardando..." : editId ? "Actualizar" : "Agregar"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {education.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-[#94A3B8]">
-          No hay formación registrada.
-        </p>
-      )}
-
-      <div className="space-y-3">
-        {education.map((edu) => (
-          <div
-            key={edu.id}
-            className="flex items-start justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-[#F8FAFC]">{edu.degree}</p>
-              <p className="text-sm text-[#94A3B8]">{edu.institution}</p>
-              <p className="mt-1 text-xs text-[#64748B]">
-                {edu.start_date ?? "—"} — {edu.end_date ?? "Presente"}
-              </p>
-              {edu.description && (
-                <p className="mt-2 text-sm text-[#94A3B8]">{edu.description}</p>
-              )}
-            </div>
-            <div className="ml-4 flex gap-2">
-              <button onClick={() => openEdit(edu)} className="rounded px-2 py-1 text-xs font-medium text-[#6366F1] transition-all duration-200 hover:bg-[#6366F1]/10">
-                Editar
-              </button>
-              <button onClick={() => handleDelete(edu.id)} className="rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
-                Eliminar
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ─── Achievements Section ────────────────────────────────────────────────────
-
-function AchievementsSection({
-  achievements,
-  userId,
-  onChanged,
-}: {
-  achievements: AchievementResponse[];
-  userId: string;
-  onChanged: () => void;
-}) {
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setShowForm(false);
-  };
-
-  const handleSave = async () => {
-    if (!title.trim()) return;
-    setSaving(true);
-    try {
-      await addAchievement({ user_id: userId, title: title.trim(), description: description.trim() });
-      resetForm();
-      onChanged();
-    } catch {
-      // handled by parent
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteAchievement(id, userId);
-    onChanged();
-  };
-
-  return (
-    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#F1F5F9]">
-          Logros Destacados
-        </h2>
-        <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
-        >
-          + Agregar logro
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
-          <div className="grid grid-cols-1 gap-4">
-            <Field label="Título" value={title} onChange={setTitle} />
-            <Field label="Descripción" value={description} onChange={setDescription} />
-          </div>
-          <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
-              Cancelar
-            </button>
-            <button onClick={handleSave} disabled={saving || !title.trim()} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
-              {saving ? "Guardando..." : "Agregar"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {achievements.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-[#94A3B8]">
-          No hay logros registrados.
-        </p>
-      )}
-
-      <div className="space-y-3">
-        {achievements.map((ach) => (
-          <div
-            key={ach.id}
-            className="flex items-start justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-[#F8FAFC]">{ach.title}</p>
-              {ach.description && (
-                <p className="mt-1 text-sm text-[#94A3B8]">{ach.description}</p>
-              )}
-            </div>
-            <button onClick={() => handleDelete(ach.id)} className="ml-4 rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
-              Eliminar
-            </button>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ─── Programs Section ────────────────────────────────────────────────────────
-
-function ProgramsSection({
-  programs,
-  userId,
-  onChanged,
-}: {
-  programs: ProgramResponse[];
-  userId: string;
-  onChanged: () => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const handleAdd = async () => {
-    if (!query.trim()) return;
-    setSaving(true);
-    try {
-      await addProgram({ user_id: userId, name: query.trim() });
-      setQuery("");
-      onChanged();
-    } catch {
-      // handled by parent
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteProgram(id, userId);
-    onChanged();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAdd();
-    }
-  };
-
-  return (
-    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-[#F1F5F9]">
-          Programas
-        </h2>
-        <p className="text-sm text-[#94A3B8]">Software, herramientas y plataformas que dominás</p>
-      </div>
-
-      <div className="mb-4 flex items-end gap-2">
-        <div className="flex-1 min-w-[200px]">
-          <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-            Nuevo programa
-          </label>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ej: Power BI, MATLAB, Bloomberg..."
-            className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] placeholder-[#64748B] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-          />
-        </div>
-        <button
-          onClick={handleAdd}
-          disabled={saving || !query.trim()}
-          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40 disabled:opacity-50 disabled:shadow-none"
-        >
-          {saving ? "Agregando..." : "Agregar"}
-        </button>
-      </div>
-
-      {programs.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[#94A3B8]">
-          No hay programas registrados.
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {programs.map((prog) => (
-            <span
-              key={prog.id}
-              className="inline-flex items-center gap-2 rounded-full border border-[#334155] bg-[#0F172A] px-3 py-1.5 text-sm transition-all duration-200 hover:border-[#6366F1]/20"
-            >
-              <span className="text-[#F8FAFC]">{prog.name}</span>
-              <button
-                onClick={() => handleDelete(prog.id)}
-                className="ml-1 text-[#64748B] transition-all duration-200 hover:text-[#EF4444]"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ─── Languages Section ───────────────────────────────────────────────────────
-
-const LANGUAGE_LEVELS = ["Nativo", "Avanzado (C1)", "Intermedio (B1)", "Básico (A2)", "Principiante (A1)"];
-
-function LanguagesSection({
-  languages,
-  userId,
-  onChanged,
-}: {
-  languages: LanguageResponse[];
-  userId: string;
-  onChanged: () => void;
-}) {
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState("");
-  const [level, setLevel] = useState("Nativo");
-  const [saving, setSaving] = useState(false);
-
-  const resetForm = () => {
-    setName("");
-    setLevel("Nativo");
-    setShowForm(false);
-  };
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      await addLanguage({ user_id: userId, name: name.trim(), level });
-      resetForm();
-      markSectionDirty("languages");
-      onChanged();
-    } catch {
-      // handled by parent
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteLanguage(id, userId);
-    markSectionDirty("languages");
-    onChanged();
-  };
-
-  return (
-    <section className="rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-xl backdrop-blur-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#F1F5F9]">
-          Idiomas
-        </h2>
-        <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 hover:shadow-indigo-500/40"
-        >
-          + Agregar idioma
-        </button>
-      </div>
-
-      {showForm && (
-        <div className="mb-6 rounded-xl border border-[#334155] bg-[#0F172A] p-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Idioma" value={name} onChange={setName} placeholder="Ej: Español, Inglés..." />
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[#F1F5F9]">
-                Nivel
-              </label>
-              <select
-                value={level}
-                onChange={(e) => setLevel(e.target.value)}
-                className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2.5 text-sm text-[#F8FAFC] transition-all duration-200 focus:border-[#6366F1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
-              >
-                {LANGUAGE_LEVELS.map((l) => (
-                  <option key={l} value={l}>{l}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={resetForm} className="rounded-lg border border-[#334155] bg-[#0F172A] px-4 py-2 text-sm font-medium text-[#F1F5F9] transition-all duration-200 hover:bg-[#1E293B]">
-              Cancelar
-            </button>
-            <button onClick={handleSave} disabled={saving || !name.trim()} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-[#6366F1]/90 disabled:opacity-50 disabled:shadow-none">
-              {saving ? "Guardando..." : "Agregar"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {languages.length === 0 && !showForm && (
-        <p className="py-8 text-center text-sm text-[#94A3B8]">
-          No hay idiomas registrados.
-        </p>
-      )}
-
-      <div className="space-y-3">
-        {languages.map((lang) => (
-          <div
-            key={lang.id}
-            className="flex items-center justify-between rounded-xl border border-[#334155] bg-[#0F172A] p-4 transition-all duration-200 hover:border-[#6366F1]/20"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-[#F8FAFC]">{lang.name}</p>
-              <p className="text-sm text-[#94A3B8]">{lang.level}</p>
-            </div>
-            <button onClick={() => handleDelete(lang.id)} className="ml-4 rounded px-2 py-1 text-xs font-medium text-[#EF4444] transition-all duration-200 hover:bg-[#EF4444]/10">
-              Eliminar
-            </button>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }

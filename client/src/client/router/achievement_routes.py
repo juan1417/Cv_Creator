@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from database.DB import get_engine
 from models.achievement import Achievement

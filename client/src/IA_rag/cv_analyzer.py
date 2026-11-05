@@ -1,79 +1,53 @@
-import hashlib
+"""Análisis del CV.
+
+Las cuatro métricas (completitud, contenido, ATS y estructura) son
+deterministas: salen de `IA_rag/metrics/` y no dependen del LLM. El LLM solo
+redacta el resumen cualitativo y las mejoras recomendadas; si falla, hay un
+resumen determinista de respaldo. El mismo CV produce siempre los mismos
+puntajes.
+"""
+
 import json
 import logging
 import os
 import re
 from uuid import UUID
 
-from database.get_user_cv import get_user_cv_data, get_user_cv_formatted
-from models.cv_analysis import (
-    CVAnalysis,
-    CompletenessMetrics,
-    ContentMetrics,
-    ATSMetrics,
-    StructureMetrics,
-    MetricDetail,
+from database.get_user_cv import get_user_cv_data
+from models.cv_analysis import CVAnalysis, MetricDetail
+
+from .generator import RateLimitError, generate_response
+from .metrics import (
+    analyze_ats,
+    analyze_completeness,
+    analyze_content,
+    analyze_structure,
+    cv_plain_text,
 )
-from .generator import generate_response
 
 logger = logging.getLogger(__name__)
 
-# Modelo específico para análisis. Si no está definido, usa MODELO.
+# Modelo específico para el resumen. Si no está definido, usa MODELO.
 ANALYSIS_MODEL = os.getenv("MODELO_ANALISIS") or os.getenv("MODELO")
 
-# Cadena de modelos de respaldo (NVIDIA a través de OpenRouter).
+# El cupo gratuito es de 50 pedidos por día. Las cuatro métricas ya son
+# deterministas, así que con MODO_ECONOMICO=1 el análisis sigue funcionando y
+# no quema un pedido por cada vez que se abre la pantalla.
+NARRATIVE_DISABLED = os.getenv("MODO_ECONOMICO", "").strip().lower() in {
+    "1", "true", "si", "sí",
+}
+
+
 def _analysis_model_chain() -> list[str]:
-    chain = [
-        ANALYSIS_MODEL,
-        os.getenv("MODELO"),
-    ]
+    """Cadena de modelos de respaldo (NVIDIA a través de OpenRouter)."""
+    chain = [ANALYSIS_MODEL, os.getenv("MODELO")]
     seen: set[str] = set()
     out: list[str] = []
-    for m in chain:
-        if m and m not in seen:
-            seen.add(m)
-            out.append(m)
+    for model in chain:
+        if model and model not in seen:
+            seen.add(model)
+            out.append(model)
     return out
-
-
-# ─── Section Definitions ─────────────────────────────────────────────────────
-
-SECTIONS = ("personal", "experience", "education", "skills", "languages")
-
-
-def _section_fingerprint(section: str, cv_data: dict) -> str:
-    """Hash de una sección individual del CV."""
-    payload = json.dumps(cv_data.get(section, {}), sort_keys=True, default=str)
-    return hashlib.md5(payload.encode("utf-8")).hexdigest()
-
-
-def _full_fingerprint(cv_data: dict) -> str:
-    """Hash completo del CV (para comparación general)."""
-    payload = json.dumps(cv_data, sort_keys=True, default=str)
-    return hashlib.md5(payload.encode("utf-8")).hexdigest()
-
-
-# ─── Section-Level Cache ─────────────────────────────────────────────────────
-# Estructura: { user_id: { section: (fingerprint, section_result) } }
-# section_result es un dict con scores y detalles de esa sección específica.
-
-_section_cache: dict[str, dict[str, tuple[str, dict]]] = {}
-
-
-def _get_cached_section(user_id: str, section: str, fp: str) -> dict | None:
-    """Devuelve el resultado cacheado de una sección si el fingerprint coincide."""
-    user_cache = _section_cache.get(user_id, {})
-    cached = user_cache.get(section)
-    if cached and cached[0] == fp:
-        return cached[1]
-    return None
-
-
-def _save_section_cache(user_id: str, section: str, fp: str, result: dict):
-    """Guarda el resultado de una sección en cache."""
-    if user_id not in _section_cache:
-        _section_cache[user_id] = {}
-    _section_cache[user_id][section] = (fp, result)
 
 
 # ─── JSON Parsing ────────────────────────────────────────────────────────────
@@ -91,20 +65,20 @@ def _extract_json(text: str) -> str:
     in_str = False
     esc = False
     for i in range(start, len(text)):
-        c = text[i]
+        char = text[i]
         if in_str:
             if esc:
                 esc = False
-            elif c == "\\":
+            elif char == "\\":
                 esc = True
-            elif c == '"':
+            elif char == '"':
                 in_str = False
         else:
-            if c == '"':
+            if char == '"':
                 in_str = True
-            elif c == "{":
+            elif char == "{":
                 depth += 1
-            elif c == "}":
+            elif char == "}":
                 depth -= 1
                 if depth == 0:
                     return text[start : i + 1]
@@ -120,416 +94,236 @@ def _parse_json_lenient(text: str) -> dict:
         return json.loads(repaired, strict=False)
 
 
-# ─── Section Analysis Prompts ────────────────────────────────────────────────
+# ─── Deterministic improvements ──────────────────────────────────────────────
 
-SECTION_PROMPTS = {
-    "personal": """Analiza los DATOS PERSONALES y el RESUMEN PROFESIONAL de este CV.
-Enfócate en: completitud de datos, calidad del "Sobre mí", presencia de portfolio y LinkedIn.
-
-## Datos personales:
-{section_data}
-
-## Responde SOLO con JSON:
-{{
-  "score": 70,
-  "details": [
-    {{"name": "Datos de contacto", "score": 80, "max_score": 100, "status": "bueno", "message": " mensaje", "suggestions": ["sugerencia"]}},
-    {{"name": "Resumen profesional", "score": 60, "max_score": 100, "status": "mejorable", "message": " mensaje", "suggestions": ["sugerencia"]}}
-  ]
-}}
-
-## Reglas:
-- Máximo 2 details, máximo 2 suggestions por detail
-- NO sugieras agregar secciones que no existen
-- Recomendaciones ESPECÍFICAS basadas en el contenido real
-- JSON en español, comillas simples en strings""",
-
-    "experience": """Analiza la EXPERIENCIA LABORAL de este CV.
-Enfócate en: calidad de descripciones, logros cuantificables, verbos de acción, métricas, progresión de carrera.
-
-## Experiencia:
-{section_data}
-
-## Responde SOLO con JSON:
-{{
-  "score": 70,
-  "details": [
-    {{"name": "Descripciones de experiencia", "score": 65, "max_score": 100, "status": "regular", "message": " mensaje", "suggestions": ["sugerencia"]}},
-    {{"name": "Progresión de carrera", "score": 75, "max_score": 100, "status": "bueno", "message": " mensaje", "suggestions": ["sugerencia"]}}
-  ]
-}}
-
-## Reglas:
-- Máximo 2 details, máximo 2 suggestions por detail
-- NO recomiendes "prácticas", "proyectos académicos" ni "freelance"
-- El campo PORTFOLIO es para proyectos → si querés mencionar proyectos, decí "Completá tu portfolio con enlaces"
-- Recomendaciones ESPECÍFICAS que mencionen el contenido real del CV
-- JSON en español, comillas simples en strings""",
-
-    "education": """Analiza la FORMACIÓN ACADÉMICA de este CV.
-Enfócate en: relevancia, completitud, descripción.
-
-## Formación:
-{section_data}
-
-## Responde SOLO con JSON:
-{{
-  "score": 75,
-  "details": [
-    {{"name": "Formación académica", "score": 75, "max_score": 100, "status": "bueno", "message": " mensaje", "suggestions": ["sugerencia"]}}
-  ]
-}}
-
-## Reglas:
-- Máximo 1 detail, máximo 2 suggestions
-- NO sugieras agregar secciones que no existen
-- JSON en español, comillas simples en strings""",
-
-    "skills": """Analiza las HABILIDADES de este CV.
-Enfócate en: variedad, equilibrio técnico/blanda, niveles, relevancia para el perfil.
-
-## Habilidades:
-{section_data}
-
-## Responde SOLO con JSON:
-{{
-  "score": 70,
-  "details": [
-    {{"name": "Variedad y equilibrio", "score": 65, "max_score": 100, "status": "regular", "message": " mensaje", "suggestions": ["sugerencia"]}},
-    {{"name": "Niveles de dominio", "score": 75, "max_score": 100, "status": "bueno", "message": " mensaje", "suggestions": ["sugerencia"]}}
-  ]
-}}
-
-## Reglas:
-- Máximo 2 details, máximo 2 suggestions por detail
-- NO sugieras agregar secciones que no existen
-- JSON en español, comillas simples en strings""",
-
-    "languages": """Analiza los IDIOMAS de este CV.
-Enfócate en: cantidad, niveles, relevancia.
-
-## Idiomas:
-{section_data}
-
-## Responde SOLO con JSON:
-{{
-  "score": 70,
-  "details": [
-    {{"name": "Idiomas", "score": 70, "max_score": 100, "status": "bueno", "message": " mensaje", "suggestions": ["sugerencia"]}}
-  ]
-}}
-
-## Reglas:
-- Máximo 1 detail, máximo 2 suggestions
-- NO sugieras agregar idiomas que no existen
-- JSON en español, comillas simples en strings""",
-}
+IMPROVEMENT_LIMIT = 5
+DETAIL_ALERT_RATIO = 0.7
 
 
-def _section_to_text(section: str, cv_data: dict) -> str:
-    """Convierte una sección del CV a texto para el prompt."""
-    if section == "personal":
-        cv = cv_data.get("cv", {})
-        lines = [f"Nombre: {cv.get('name', '')}"]
-        if cv.get("about"):
-            lines.append(f"Sobre mí: {cv['about']}")
-        if cv.get("porfolio"):
-            lines.append(f"Portfolio: {cv['porfolio']}")
-        if cv.get("linkedin"):
-            lines.append(f"LinkedIn: {cv['linkedin']}")
-        return "\n".join(lines)
-
-    if section == "experience":
-        exps = cv_data.get("experience", [])
-        if not exps:
-            return "Sin experiencia registrada."
-        lines = []
-        for e in exps:
-            lines.append(f"- {e.get('title', '')} en {e.get('company', '')} ({e.get('start_date', '')} - {e.get('end_date', 'Presente')})")
-            if e.get("description"):
-                lines.append(f"  Descripción: {e['description']}")
-        return "\n".join(lines)
-
-    if section == "education":
-        edus = cv_data.get("education", [])
-        if not edus:
-            return "Sin formación registrada."
-        lines = []
-        for ed in edus:
-            lines.append(f"- {ed.get('degree', '')} en {ed.get('institution', '')} ({ed.get('start_date', '')} - {ed.get('end_date', 'Presente')})")
-            if ed.get("description"):
-                lines.append(f"  Descripción: {ed['description']}")
-        return "\n".join(lines)
-
-    if section == "skills":
-        skills = cv_data.get("skills", [])
-        if not skills:
-            return "Sin habilidades registradas."
-        return "\n".join(f"- {s['name']} ({s['level']})" for s in skills)
-
-    if section == "languages":
-        # Los idiomas vienen del FullCV, no de get_user_cv_data
-        # Los manejamos por separado
-        return "Los idiomas se analizan por separado."
-
-    return ""
+def _detail_ratio(detail: MetricDetail) -> float:
+    return detail.score / detail.max_score if detail.max_score else 1.0
 
 
-def _analyze_section(section: str, cv_data: dict) -> dict | None:
-    """Analiza una sección individual con la IA. Devuelve el dict de resultado."""
-    prompt_template = SECTION_PROMPTS.get(section)
-    if not prompt_template:
+def _deterministic_improvements(groups: list[tuple[str, list[MetricDetail]]]) -> list[str]:
+    """Sugerencias concretas de los detalles con peor desempeño."""
+    ranked: list[tuple[float, str]] = []
+    for _label, details in groups:
+        for detail in details:
+            if _detail_ratio(detail) >= DETAIL_ALERT_RATIO:
+                continue
+            for suggestion in detail.suggestions:
+                ranked.append((_detail_ratio(detail), suggestion))
+
+    ranked.sort(key=lambda item: item[0])
+    out: list[str] = []
+    for _ratio, suggestion in ranked:
+        if suggestion not in out:
+            out.append(suggestion)
+    return out
+
+
+def _merge_improvements(deterministic: list[str], from_llm: list[str]) -> list[str]:
+    merged: list[str] = []
+    for suggestion in from_llm + deterministic:
+        text = (suggestion or "").strip()
+        if text and text not in merged:
+            merged.append(text)
+    if not merged:
+        merged.append(
+            "Tu CV está bien optimizado. Mantené las descripciones actualizadas."
+        )
+    return merged[:IMPROVEMENT_LIMIT]
+
+
+def _fallback_summary(
+    scores: dict[str, float],
+    job_description: str | None,
+) -> str:
+    """Resumen determinista cuando el LLM no responde."""
+    best = max(scores, key=lambda key: scores[key])
+    worst = min(scores, key=lambda key: scores[key])
+    summary = (
+        f"Mayor fortaleza: {best} ({scores[best]:.0f}/100). "
+        f"Principal área de mejora: {worst} ({scores[worst]:.0f}/100)."
+    )
+    if not (job_description or "").strip():
+        summary += (
+            " Pegá la descripción del puesto para medir la cobertura de palabras clave."
+        )
+    return summary
+
+
+# ─── Optional LLM narrative ──────────────────────────────────────────────────
+
+def _metrics_prompt_block(groups: list[tuple[str, list[MetricDetail]]]) -> str:
+    lines: list[str] = []
+    for label, details in groups:
+        total = sum(d.score for d in details)
+        max_total = sum(d.max_score for d in details) or 1
+        lines.append(f"- {label}: {total:.0f}/{max_total:.0f}")
+        for detail in details:
+            lines.append(
+                f"  - {detail.name}: {detail.score}/{detail.max_score} ({detail.message})"
+            )
+    return "\n".join(lines)
+
+
+def _llm_narrative(
+    cv_data: dict,
+    groups: list[tuple[str, list[MetricDetail]]],
+    job_description: str | None,
+) -> tuple[str, list[str]] | None:
+    """Pide al LLM un resumen y mejoras; no toca los puntajes."""
+    if NARRATIVE_DISABLED:
         return None
 
-    section_text = _section_to_text(section, cv_data)
-    if not section_text or section_text.startswith("Sin ") or section_text.startswith("Los "):
-        # Sección vacía o no aplicable
-        return {
-            "score": 0,
-            "details": [{
-                "name": section,
-                "score": 0,
-                "max_score": 100,
-                "status": "débil",
-                "message": f"Sin {section} registrados",
-                "suggestions": [f"Agregá {section} a tu CV"],
-            }],
-        }
+    cv_text = cv_plain_text(cv_data)
+    if not cv_text.strip():
+        return None
 
-    prompt = prompt_template.format(section_data=section_text)
+    vacancy = (
+        job_description.strip()
+        if (job_description or "").strip()
+        else "No se proporcionó descripción del puesto."
+    )
+    prompt = f"""Analiza este CV usando las métricas ya calculadas. NO cambies los
+puntajes: solo redactá un resumen y mejoras concretas.
+
+## Texto del CV
+{cv_text}
+
+## Métricas deterministas
+{_metrics_prompt_block(groups)}
+
+## Descripción del puesto
+{vacancy}
+
+## Responde SOLO con JSON:
+{{
+  "summary": "2 o 3 frases sobre el estado del CV y su ajuste al puesto",
+  "top_improvements": ["mejora concreta 1", "mejora concreta 2", "mejora concreta 3"]
+}}
+
+## Reglas:
+- Máximo 3 mejoras, accionables y específicas del contenido real
+- No inventes experiencia, estudios ni logros que no estén en el CV
+- No repitas los puntajes como si fueran texto
+- Español neutro, sin regionalismos
+- JSON válido, comillas dobles"""
+
     messages = [
-        {"role": "system", "content": "Eres un experto en CVs. Responde SOLO con JSON válido y EXCLUSIVAMENTE en español."},
+        {
+            "role": "system",
+            "content": (
+                "Sos un experto en CVs y sistemas ATS. Responde SOLO con JSON "
+                "válido y exclusivamente en español."
+            ),
+        },
         {"role": "user", "content": prompt},
     ]
 
     for model in _analysis_model_chain():
-        try:
-            response = generate_response(
-                messages, model=model, temperature=0.3, max_tokens=1500,
-                response_format={"type": "json_object"},
-            )
-            data = _parse_json_lenient(response)
-            return data
-        except Exception as e:
-            logger.error("Section %s analysis failed with model %s: %s", section, model, e)
+        for use_json_mode in (True, False):
+            kwargs = {
+                "model": model,
+                "temperature": 0.2,
+                # Los modelos gratuitos razonan antes de responder y los
+                # prompts largos se truncan: 4000 deja margen para el JSON
+                # completo. Un solo intento por modo acota la latencia peor
+                # caso a dos requests; si falla, el resumen determinista
+                # (abajo) responde igual.
+                "max_tokens": 4000,
+                "max_retries": 0,
+            }
+            if use_json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
             try:
-                response = generate_response(
-                    messages, model=model, temperature=0.3, max_tokens=1500,
-                )
+                response = generate_response(messages, **kwargs)
                 data = _parse_json_lenient(response)
-                return data
-            except Exception as e2:
-                logger.error("Section %s retry failed: %s", section, e2)
+            except RateLimitError as exc:
+                # Sin cupo no tiene sentido gastar otro modo de llamada: el
+                # resumen determinista responde igual.
+                logger.warning("Narrative sin cupo disponible: %s", exc)
+                return None
+            except Exception as exc:  # noqa: BLE001 - el fallback es determinista
+                logger.warning(
+                    "Narrative with model %s failed (json=%s): %s",
+                    model,
+                    use_json_mode,
+                    exc,
+                )
                 continue
+
+            summary = str(data.get("summary") or "").strip()
+            raw_improvements = data.get("top_improvements") or []
+            if isinstance(raw_improvements, str):
+                raw_improvements = [raw_improvements]
+            improvements = [
+                str(item).strip()
+                for item in raw_improvements
+                if str(item).strip()
+            ]
+            if summary:
+                return summary, improvements[:3]
 
     return None
 
 
-# ─── Completeness (determinista, sin IA) ─────────────────────────────────────
-
-def _detail(name: str, score: float, message: str, suggestions: list[str]) -> MetricDetail:
-    return MetricDetail(
-        name=name,
-        score=score,
-        max_score=100,
-        status="bueno" if score >= 75 else ("mejorable" if score >= 50 else "débil"),
-        message=message,
-        suggestions=suggestions,
-    )
-
-
-def _deterministic_completeness(cv_data: dict) -> CompletenessMetrics:
-    """Completitud objetiva: qué tan lleno está el CV."""
-    cv = cv_data.get("cv", {})
-    experiences = cv_data.get("experience", [])
-    skills = cv_data.get("skills", [])
-    education = cv_data.get("education", [])
-
-    details: list[MetricDetail] = []
-
-    personal_fields = [cv.get("name"), cv.get("email"), cv.get("phone"), cv.get("address")]
-    filled = sum(1 for f in personal_fields if f and str(f).strip())
-    personal_score = round(filled / len(personal_fields) * 100)
-    details.append(_detail(
-        "Datos personales",
-        personal_score,
-        f"{filled} de {len(personal_fields)} campos completos",
-        [] if personal_score == 100 else ["Completá nombre, email, teléfono y dirección"],
-    ))
-
-    about = (cv.get("about") or "").strip()
-    about_score = 0 if not about else (100 if len(about) >= 100 else 60)
-    details.append(_detail(
-        "Resumen profesional",
-        about_score,
-        "Presente y desarrollado" if about_score == 100 else ("Presente pero corto" if about else "Falta el resumen"),
-        [] if about_score == 100 else ["Escribí un 'Sobre mí' de al menos 100 caracteres"],
-    ))
-
-    exp_with_desc = sum(1 for e in experiences if (e.get("description") or "").strip())
-    exp_score = 0 if not experiences else round(exp_with_desc / len(experiences) * 100)
-    details.append(_detail(
-        "Experiencia laboral",
-        exp_score,
-        f"{len(experiences)} experiencia(s), {exp_with_desc} con descripción",
-        [] if exp_score == 100 else ["Agregá una descripción a cada experiencia"],
-    ))
-
-    skill_score = min(100, len(skills) * 12)
-    details.append(_detail(
-        "Habilidades",
-        skill_score,
-        f"{len(skills)} habilidades registradas",
-        [] if skill_score >= 80 else ["Agregá más habilidades técnicas y blandas"],
-    ))
-
-    edu_score = 100 if education else 0
-    details.append(_detail(
-        "Formación académica",
-        edu_score,
-        f"{len(education)} formación(es) registradas",
-        [] if edu_score == 100 else ["Agregá tu formación académica"],
-    ))
-
-    score = round(sum(d.score for d in details) / len(details), 1) if details else 0
-    return CompletenessMetrics(score=score, details=details)
-
-
 # ─── Main Analysis Function ──────────────────────────────────────────────────
 
-def analyze_cv(user_id: UUID, sections_to_analyze: list[str] | None = None) -> CVAnalysis:
-    """
-    Analiza el CV con soporte por secciones.
+OVERALL_WEIGHTS = {
+    "completeness": 0.25,
+    "content": 0.35,
+    "ats": 0.20,
+    "structure": 0.20,
+}
+
+
+def analyze_cv(user_id: UUID, job_description: str | None = None) -> CVAnalysis:
+    """Analiza el CV de forma determinista.
 
     Args:
-        user_id: ID del usuario
-        sections_to_analyze: Lista de secciones a re-analizar.
-            Si es None, analiza todas.
-            Si es lista vacía, usa todo cacheado.
-            Ej: ["experience", "skills"] → solo re-analiza esas secciones.
+        user_id: ID del usuario.
+        job_description: descripción opcional del puesto para medir la
+            cobertura de palabras clave.
     """
     cv_data = get_user_cv_data(user_id)
     if not cv_data:
         raise ValueError("No se encontró CV para este usuario")
 
-    user_key = str(user_id)
-    completeness = _deterministic_completeness(cv_data)
-
-    # Determinar qué secciones analizar
-    if sections_to_analyze is None:
-        # Análisis completo: todas las secciones
-        sections_to_analyze = list(SECTIONS)
-
-    # Fingerprints de cada sección
-    section_fps = {s: _section_fingerprint(s, cv_data) for s in SECTIONS}
-
-    # Resultados: usar cache o analizar
-    section_results: dict[str, dict] = {}
-    sections_analyzed_now: list[str] = []
-
-    for section in SECTIONS:
-        fp = section_fps[section]
-
-        if section not in sections_to_analyze:
-            # No se pidió re-analizar → usar cache
-            cached = _get_cached_section(user_key, section, fp)
-            if cached:
-                section_results[section] = cached
-                logger.info("Section %s: using cache", section)
-                continue
-
-        # Verificar cache por fingerprint
-        cached = _get_cached_section(user_key, section, fp)
-        if cached:
-            section_results[section] = cached
-            logger.info("Section %s: cache hit (fp match)", section)
-            continue
-
-        # Analizar con IA
-        logger.info("Section %s: analyzing with AI", section)
-        result = _analyze_section(section, cv_data)
-        if result:
-            section_results[section] = result
-            _save_section_cache(user_key, section, fp, result)
-            sections_analyzed_now.append(section)
-        else:
-            # Fallback: score 0
-            section_results[section] = {
-                "score": 0,
-                "details": [],
-            }
-
-    # Construir respuesta completa
-    return _build_analysis(section_results, completeness, sections_analyzed_now)
-
-
-def _build_analysis(
-    section_results: dict[str, dict],
-    completeness: CompletenessMetrics,
-    sections_analyzed: list[str],
-) -> CVAnalysis:
-    """Construye CVAnalysis combinando resultados de secciones."""
-
-    # Mapear secciones a métricas del modelo
-    # Contenido = experience + personal (about)
-    content_data = _merge_sections(section_results, ["experience", "personal"])
-    # ATS = skills + experience (palabras clave)
-    ats_data = _merge_sections(section_results, ["skills", "experience"])
-    # Estructura = education + skills (organización y variedad)
-    structure_data = _merge_sections(section_results, ["education", "skills"])
-
-    content = ContentMetrics(
-        score=content_data.get("score", 0),
-        details=[MetricDetail(**d) for d in content_data.get("details", [])],
-    )
-    ats = ATSMetrics(
-        score=ats_data.get("score", 0),
-        details=[MetricDetail(**d) for d in ats_data.get("details", [])],
-    )
-    structure = StructureMetrics(
-        score=structure_data.get("score", 0),
-        details=[MetricDetail(**d) for d in structure_data.get("details", [])],
-    )
+    completeness = analyze_completeness(cv_data)
+    content = analyze_content(cv_data)
+    ats = analyze_ats(cv_data, job_description)
+    structure = analyze_structure(cv_data)
 
     overall = round(
-        completeness.score * 0.25
-        + content.score * 0.35
-        + ats.score * 0.20
-        + structure.score * 0.20,
+        completeness.score * OVERALL_WEIGHTS["completeness"]
+        + content.score * OVERALL_WEIGHTS["content"]
+        + ats.score * OVERALL_WEIGHTS["ats"]
+        + structure.score * OVERALL_WEIGHTS["structure"],
         1,
     )
 
-    # Generar top_improvements de las secciones con menor score
-    all_details = []
-    for section, data in section_results.items():
-        for d in data.get("details", []):
-            if d.get("score", 100) < 70:
-                all_details.append((section, d))
+    groups: list[tuple[str, list[MetricDetail]]] = [
+        ("Completitud", completeness.details),
+        ("Contenido", content.details),
+        ("Compatibilidad ATS", ats.details),
+        ("Estructura", structure.details),
+    ]
+    scores = {
+        "Completitud": completeness.score,
+        "Contenido": content.score,
+        "Compatibilidad ATS": ats.score,
+        "Estructura": structure.score,
+    }
 
-    # Ordenar por score ascendente
-    all_details.sort(key=lambda x: x[1].get("score", 0))
-
-    top_improvements = []
-    for section, detail in all_details[:3]:
-        suggs = detail.get("suggestions", [])
-        if suggs:
-            top_improvements.append(suggs[0])
-
-    if not top_improvements:
-        top_improvements = ["Tu CV está bien optimizado. Mantené las descripciones actualizadas."]
-
-    # Generar summary
-    scores = {s: d.get("score", 0) for s, d in section_results.items()}
-    if scores:
-        best = max(scores, key=lambda k: scores[k])
-        worst = min(scores, key=lambda k: scores[k])
+    deterministic = _deterministic_improvements(groups)
+    narrative = _llm_narrative(cv_data, groups, job_description)
+    if narrative:
+        summary, llm_improvements = narrative
     else:
-        best = worst = "general"
-
-    summary = f"Mayor fortaleza: {best} ({scores.get(best, 0)}/100). "
-    summary += f"Principal área de mejora: {worst} ({scores.get(worst, 0)}/100). "
-    if sections_analyzed:
-        summary += f"Secciones analizadas: {', '.join(sections_analyzed)}."
+        summary = _fallback_summary(scores, job_description)
+        llm_improvements = []
 
     return CVAnalysis(
         overall_score=overall,
@@ -538,19 +332,5 @@ def _build_analysis(
         ats_compatibility=ats,
         structure=structure,
         summary=summary,
-        top_improvements=top_improvements,
+        top_improvements=_merge_improvements(deterministic, llm_improvements),
     )
-
-
-def _merge_sections(section_results: dict[str, dict], sections: list[str]) -> dict:
-    """Combina resultados de múltiples secciones en un solo dict."""
-    all_details = []
-    scores = []
-    for s in sections:
-        data = section_results.get(s, {})
-        scores.append(data.get("score", 0))
-        for d in data.get("details", []):
-            all_details.append(d)
-
-    avg_score = round(sum(scores) / len(scores)) if scores else 0
-    return {"score": avg_score, "details": all_details}

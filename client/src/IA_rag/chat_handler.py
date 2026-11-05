@@ -2,7 +2,6 @@ from uuid import UUID
 from datetime import datetime
 from sqlmodel import Session, select
 
-from database.DB import get_engine
 from models.chat import ChatSession, ChatMessage
 from models.user import User  # noqa: F401 - needed for FK resolution
 from models.cv import CV  # noqa: F401 - needed for FK resolution

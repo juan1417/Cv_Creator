@@ -1,4 +1,37 @@
-from models.cv_analysis import ATSMetrics, MetricDetail
+"""Motor ATS determinista.
+
+No usa LLM. Mide lo que un sistema de seguimiento de candidaturas realmente
+evalúa:
+
+1. Datos de contacto que el parser necesita para indexar al candidato.
+2. Presencia de las secciones estándar que el parser busca.
+3. Formato legible: fechas, descripciones y líneas de longitud razonable.
+4. Cobertura de las palabras clave de la vacante.
+
+Las cuatro partes pesan 25 puntos cada una.
+"""
+
+import re
+
+from models.cv_analysis import ATSMetrics, KeywordCoverage, MetricDetail
+
+from .keywords import KEYWORD_MAX_SCORE, keyword_coverage
+
+CONTACT_PTS = 25.0
+SECTION_PTS = 25.0
+FORMAT_PTS = 25.0
+
+MAX_DESCRIPTION_LINE = 260
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+_PHONE_DIGITS_RE = re.compile(r"\d")
+
+_STANDARD_SECTIONS = (
+    ("Resumen profesional", "about"),
+    ("Experiencia laboral", "experience"),
+    ("Formación académica", "education"),
+    ("Habilidades", "skills"),
+)
 
 
 def _status(score: float) -> str:
@@ -11,96 +44,226 @@ def _status(score: float) -> str:
     return "poor"
 
 
-def analyze_ats(cv_data: dict) -> ATSMetrics:
-    details: list[MetricDetail] = []
-    total = 0.0
-    cv = cv_data["cv"]
+def cv_plain_text(cv_data: dict) -> str:
+    """Todo el texto visible del CV, en el orden en que lo lee un parser."""
+    cv = cv_data.get("cv", {})
+    parts: list[str] = [
+        cv.get("name", ""),
+        cv.get("about", ""),
+    ]
 
-    contact_fields = [cv["name"], cv["email"], cv["phone"]]
-    contact_filled = sum(1 for f in contact_fields if f.strip())
-    contact_pts = 25.0
-    contact_score = contact_pts * (contact_filled / len(contact_fields))
-    total += contact_score
-    details.append(MetricDetail(
-        name="Información de contacto",
-        score=round(contact_score, 1),
-        max_score=contact_pts,
-        status=_status(contact_score / contact_pts * 100),
-        message=f"{contact_filled}/3 campos de contacto completos",
+    for experience in cv_data.get("experience", []):
+        parts.extend([
+            experience.get("title", ""),
+            experience.get("company", ""),
+            experience.get("description", ""),
+        ])
+
+    for skill in cv_data.get("skills", []):
+        parts.append(skill.get("name", ""))
+
+    for education in cv_data.get("education", []):
+        parts.extend([
+            education.get("degree", ""),
+            education.get("institution", ""),
+            education.get("description", ""),
+        ])
+
+    for achievement in cv_data.get("achievements", []):
+        parts.extend([
+            achievement.get("title", ""),
+            achievement.get("description", ""),
+        ])
+
+    for program in cv_data.get("programs", []):
+        parts.append(program.get("name", "") if isinstance(program, dict) else str(program))
+
+    for language in cv_data.get("languages", []):
+        parts.append(language.get("name", ""))
+
+    return "\n".join(part for part in parts if part)
+
+
+def _contact_detail(cv: dict) -> tuple[MetricDetail, float]:
+    checks = (
+        ("nombre", bool((cv.get("name") or "").strip())),
+        ("email", bool(_EMAIL_RE.match((cv.get("email") or "").strip()))),
+        ("teléfono", bool(_PHONE_DIGITS_RE.search(cv.get("phone") or ""))),
+    )
+    filled = sum(1 for _, ok in checks if ok)
+    score = round(CONTACT_PTS * filled / len(checks), 1)
+    missing = [label for label, ok in checks if not ok]
+
+    return MetricDetail(
+        name="Datos de contacto",
+        score=score,
+        max_score=CONTACT_PTS,
+        status=_status(score / CONTACT_PTS * 100),
+        message=f"{filled}/{len(checks)} datos de contacto válidos",
         suggestions=(
-            []
-            if contact_filled == 3
-            else ["Completa nombre, email y teléfono para máxima compatibilidad ATS"]
+            [] if not missing else [f"Completá o corregí: {', '.join(missing)}"]
         ),
-    ))
+    ), score
 
-    skills = cv_data["skills"]
-    skill_pts = 25.0
-    if skills:
-        short_skills = [s for s in skills if len(s["name"]) <= 30]
-        skill_score = skill_pts * (len(short_skills) / len(skills))
-        skill_msg = f"{len(short_skills)}/{len(skills)} skills con formato ATS-amigable"
-        skill_suggestions = (
-            []
-            if len(short_skills) == len(skills)
-            else ["Usa nombres cortos y keywords en tus skills (ej: 'Python', 'React', no frases largas)"]
+
+def _sections_detail(cv_data: dict) -> tuple[MetricDetail, float]:
+    cv = cv_data.get("cv", {})
+    values = {
+        "about": cv.get("about"),
+        "experience": cv_data.get("experience"),
+        "education": cv_data.get("education"),
+        "skills": cv_data.get("skills"),
+    }
+
+    present: list[str] = []
+    missing: list[str] = []
+    for label, key in _STANDARD_SECTIONS:
+        value = values.get(key)
+        has_value = bool(value.strip()) if isinstance(value, str) else bool(value)
+        (present if has_value else missing).append(label)
+
+    score = round(SECTION_PTS * len(present) / len(_STANDARD_SECTIONS), 1)
+    return MetricDetail(
+        name="Secciones estándar",
+        score=score,
+        max_score=SECTION_PTS,
+        status=_status(score / SECTION_PTS * 100),
+        message=f"{len(present)}/{len(_STANDARD_SECTIONS)} secciones presentes",
+        suggestions=(
+            [] if not missing else [f"Agregá una sección de: {', '.join(missing)}"]
+        ),
+    ), score
+
+
+def _format_detail(cv_data: dict) -> tuple[MetricDetail, float]:
+    experiences = cv_data.get("experience", [])
+    education = cv_data.get("education", [])
+    entries = list(experiences) + list(education)
+
+    dated = sum(
+        1 for entry in entries
+        if entry.get("start_date") or entry.get("end_date")
+    )
+    dated_ratio = dated / len(entries) if entries else 0.0
+
+    with_description = sum(
+        1 for experience in experiences
+        if (experience.get("description") or "").strip()
+    )
+    description_ratio = with_description / len(experiences) if experiences else 0.0
+
+    long_line_entries = 0
+    for experience in experiences:
+        description = (experience.get("description") or "").strip()
+        if not description:
+            continue
+        if any(len(line) > MAX_DESCRIPTION_LINE for line in description.splitlines()):
+            long_line_entries += 1
+    readable_ratio = (
+        1.0 - long_line_entries / len(experiences) if experiences else 0.0
+    )
+
+    score = round(
+        FORMAT_PTS * 0.4 * dated_ratio
+        + FORMAT_PTS * 0.4 * description_ratio
+        + FORMAT_PTS * 0.2 * readable_ratio,
+        1,
+    )
+
+    suggestions: list[str] = []
+    if entries and dated_ratio < 1.0:
+        suggestions.append("Poné fecha de inicio (y fin) en cada experiencia y formación")
+    if experiences and description_ratio < 1.0:
+        suggestions.append("Agregá una descripción a cada experiencia")
+    if long_line_entries:
+        suggestions.append(
+            f"Partí en viñetas las descripciones con líneas de más de {MAX_DESCRIPTION_LINE} caracteres"
         )
-    else:
-        skill_score = 0.0
-        skill_msg = "Sin skills para evaluar compatibilidad ATS"
-        skill_suggestions = ["Agrega habilidades con keywords técnicas relevantes"]
-    total += skill_score
-    details.append(MetricDetail(
-        name="Skills como keywords",
-        score=round(skill_score, 1),
-        max_score=skill_pts,
-        status=_status(skill_score / skill_pts * 100),
-        message=skill_msg,
-        suggestions=skill_suggestions,
-    ))
 
-    experiences = cv_data["experience"]
-    exp_pts = 25.0
-    if experiences:
-        titled = [e for e in experiences if e["title"].strip()]
-        title_ratio = len(titled) / len(experiences)
-        exp_score = exp_pts * title_ratio
-        exp_msg = f"{len(titled)}/{len(experiences)} experiencias con título claro"
-        exp_suggestions = (
-            []
-            if title_ratio >= 1.0
-            else ["Asegúrate de que cada experiencia tenga un título claro y específico"]
+    return MetricDetail(
+        name="Formato y legibilidad",
+        score=score,
+        max_score=FORMAT_PTS,
+        status=_status(score / FORMAT_PTS * 100),
+        message=(
+            f"{dated}/{len(entries)} entradas con fecha, "
+            f"{with_description}/{len(experiences)} experiencias con descripción"
+        ),
+        suggestions=suggestions,
+    ), score
+
+
+def _keywords_detail(
+    cv_data: dict, job_description: str | None
+) -> tuple[MetricDetail, float, KeywordCoverage]:
+    if not (job_description or "").strip():
+        coverage = KeywordCoverage(
+            score=0.0,
+            max_score=KEYWORD_MAX_SCORE,
+            job_description_provided=False,
+            message="Sin descripción del puesto: no se puede medir la cobertura de keywords.",
         )
-    else:
-        exp_score = 0.0
-        exp_msg = "Sin experiencias para evaluar"
-        exp_suggestions = ["Agrega experiencias con títulos descriptivos"]
-    total += exp_score
-    details.append(MetricDetail(
-        name="Títulos de experiencia claros",
-        score=round(exp_score, 1),
-        max_score=exp_pts,
-        status=_status(exp_score / exp_pts * 100),
-        message=exp_msg,
-        suggestions=exp_suggestions,
-    ))
+        detail = MetricDetail(
+            name="Cobertura de palabras clave",
+            score=0.0,
+            max_score=KEYWORD_MAX_SCORE,
+            status="poor",
+            message=coverage.message,
+            suggestions=[
+                "Pegá la descripción del puesto para medir qué keywords de la vacante faltan en tu CV"
+            ],
+        )
+        return detail, 0.0, coverage
 
-    education = cv_data["education"]
-    edu_pts = 25.0
-    if education:
-        edu_score = edu_pts
-        edu_msg = f"{len(education)} formación(es) presente(s)"
-    else:
-        edu_score = 0.0
-        edu_msg = "Sin sección de educación"
-    total += edu_score
-    details.append(MetricDetail(
-        name="Sección de educación",
-        score=round(edu_score, 1),
-        max_score=edu_pts,
-        status=_status(edu_score / edu_pts * 100),
-        message=edu_msg,
-        suggestions=[] if education else ["Agrega tu formación académica para mejorar el puntaje ATS"],
-    ))
+    coverage = keyword_coverage(cv_plain_text(cv_data), job_description)
 
-    return ATSMetrics(score=round(total, 1), details=details)
+    suggestions: list[str] = []
+    if coverage.missing:
+        top_missing = ", ".join(coverage.missing[:8])
+        suggestions.append(
+            f"Si es honesto para tu perfil, incluí estas keywords de la vacante: {top_missing}"
+        )
+
+    detail = MetricDetail(
+        name="Cobertura de palabras clave",
+        score=coverage.score,
+        max_score=coverage.max_score,
+        status=_status(coverage.score / coverage.max_score * 100),
+        message=coverage.message,
+        suggestions=suggestions,
+    )
+    return detail, coverage.score, coverage
+
+
+def analyze_ats(cv_data: dict, job_description: str | None = None) -> ATSMetrics:
+    """Calcula el score ATS determinista del CV (opcionalmente contra una vacante).
+
+    Sin descripción del puesto no hay nada que comparar: el bloque de keywords
+    queda sin medir y el score se normaliza sobre los 75 puntos aplicables, para
+    no castigar al candidato por un dato que no aportó.
+    """
+    cv = cv_data.get("cv", {})
+
+    contact_detail, contact_score = _contact_detail(cv)
+    sections_detail, sections_score = _sections_detail(cv_data)
+    format_detail, format_score = _format_detail(cv_data)
+    keywords_detail, keywords_score, coverage = _keywords_detail(cv_data, job_description)
+
+    raw_total = contact_score + sections_score + format_score + keywords_score
+    applicable_max = (
+        CONTACT_PTS + SECTION_PTS + FORMAT_PTS + KEYWORD_MAX_SCORE
+        if coverage.job_description_provided
+        else CONTACT_PTS + SECTION_PTS + FORMAT_PTS
+    )
+    total = round(raw_total * 100 / applicable_max, 1)
+
+    return ATSMetrics(
+        score=total,
+        details=[
+            contact_detail,
+            sections_detail,
+            format_detail,
+            keywords_detail,
+        ],
+        keyword_coverage=coverage,
+    )

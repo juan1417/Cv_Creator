@@ -106,6 +106,8 @@ export interface SkillResponse {
   id: string;
   name: string;
   level: string;
+  /** Categoría derivada del catálogo; define en qué línea del CV aparece. */
+  category?: string;
   type: string;
 }
 
@@ -219,11 +221,25 @@ export interface MetricGroup {
   details: MetricDetail[];
 }
 
+export interface KeywordCoverage {
+  score: number;
+  max_score: number;
+  matched: string[];
+  missing: string[];
+  total: number;
+  job_description_provided: boolean;
+  message: string;
+}
+
+export interface ATSMetricGroup extends MetricGroup {
+  keyword_coverage?: KeywordCoverage | null;
+}
+
 export interface CVAnalysis {
   overall_score: number;
   completeness: MetricGroup;
   content: MetricGroup;
-  ats_compatibility: MetricGroup;
+  ats_compatibility: ATSMetricGroup;
   structure: MetricGroup;
   summary: string;
   top_improvements: string[];
@@ -334,4 +350,32 @@ export interface CVAdaptationResult {
   adapted_skills: AdaptedSkill[];
   key_changes: string[];
   tips: string[];
+}
+
+// ─── Export & ATS report ─────────────────────────────────────────────────────
+
+export type ExportFormat = "pdf" | "docx";
+
+export interface ExportRequest {
+  user_id: string;
+  format: ExportFormat;
+  adapted_about?: string | null;
+  adapted_experiences?: AdaptedExperience[];
+  adapted_skills?: AdaptedSkill[];
+}
+
+export interface ExportValidationResult {
+  format: string;
+  ok: boolean;
+  pages: number;
+  characters: number;
+  present: string[];
+  missing: string[];
+  problems: string[];
+  warnings: string[];
+}
+
+export interface ATSReportResponse {
+  ats: ATSMetricGroup;
+  export_check: ExportValidationResult;
 }

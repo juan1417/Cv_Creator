@@ -2,9 +2,18 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from database.DB import get_engine
+from models.achievement import Achievement
+from models.chat import ChatMessage, ChatSession
+from models.cv import CV
+from models.education import Education
+from models.experience import Experience
+from models.language import Language
+from models.program import Program
+from models.skill_catalog import SkillCatalog
+from models.skill import Skills
 from models.user import User
 from argon2 import PasswordHasher
 
@@ -127,6 +136,23 @@ async def delete_user(user_id: UUID):
         user = session.get(User, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        # Ninguna tabla hija tiene ON DELETE CASCADE (verificado en
+        # pg_constraint): sin limpiarlas el DELETE del usuario falla por
+        # restricción de clave foránea y nunca se borra nada.
+        session.execute(delete(ChatMessage).where(ChatMessage.idUser == user_id))
+        session.execute(delete(ChatSession).where(ChatSession.idUser == user_id))
+        for model in (
+            Experience,
+            Skills,
+            Education,
+            Achievement,
+            Program,
+            Language,
+            SkillCatalog,
+            CV,
+        ):
+            session.execute(delete(model).where(model.idUser == user_id))
 
         session.delete(user)
         session.commit()

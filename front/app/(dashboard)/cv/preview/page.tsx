@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth";
-import { getFullCV } from "@/app/lib/api";
-import type { FullCV } from "@/app/lib/types";
+import { getFullCV, exportCV, apiErrorMessage } from "@/app/lib/api";
+import type { ExperienceResponse, ExportFormat, FullCV } from "@/app/lib/types";
+import { groupSkills } from "@/app/lib/cv-skill-groups";
+import {
+  SECTION_EXPERIENCE,
+  SECTION_PROJECTS,
+  projectLabel,
+  splitExperience,
+} from "@/app/lib/cv-experience-split";
 
 const FONT = "'Arial', 'Helvetica Neue', Helvetica, sans-serif";
 const COLOR = "#404040";
@@ -22,14 +29,39 @@ export default function CVPreviewPage() {
   const router = useRouter();
   const [cv, setCV] = useState<FullCV | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<ExportFormat | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     getFullCV(user.id)
-      .then(setCV)
+      .then((data) => {
+        setCV(data);
+        // Chrome imprime el título del documento en el encabezado de la hoja:
+        // mejor el nombre del candidato que "CV Creator" + la URL del server.
+        document.title = `CV — ${data.cv.name || "Sin nombre"}`;
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
+
+  /**
+   * El archivo lo genera el backend (Harvard, A4, una columna): a diferencia de
+   * imprimir la página, acá no entra el encabezado ni el pie que agrega el
+   * navegador.
+   */
+  const handleExport = async (format: ExportFormat) => {
+    if (!user || downloading) return;
+    setDownloading(format);
+    setDownloadError(null);
+    try {
+      await exportCV({ user_id: user.id, format });
+    } catch (e) {
+      setDownloadError(apiErrorMessage(e, "No se pudo generar el archivo."));
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -38,7 +70,6 @@ export default function CVPreviewPage() {
       </div>
     );
   }
-
   if (!cv) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -55,6 +86,7 @@ export default function CVPreviewPage() {
 
   const data = cv.cv;
   const experiences = cv.experiences || [];
+  const { jobs, projects } = splitExperience(experiences);
   const education = cv.education || [];
   const skills = cv.skills || [];
   const achievements = cv.achievements || [];
@@ -71,6 +103,8 @@ export default function CVPreviewPage() {
     programs.length ||
     languages.length;
 
+  const skillGroups = groupSkills(skills, programs);
+
   const contactParts = [
     data.address,
     data.linkedin,
@@ -80,7 +114,7 @@ export default function CVPreviewPage() {
   ].filter(Boolean);
 
   return (
-    <div className="max-w-[800px] mx-auto">
+    <div className="max-w-[800px] mx-auto cv-sheet-outer">
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6 no-print">
         <button
@@ -92,17 +126,42 @@ export default function CVPreviewPage() {
           </svg>
           Volver a Editar
         </button>
-        <button
-          onClick={() => window.print()}
-          className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all"
-        >
-          Imprimir / Guardar PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleExport("pdf")}
+            disabled={downloading !== null}
+            className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {downloading === "pdf" ? "Generando..." : "Descargar PDF"}
+          </button>
+          <button
+            onClick={() => handleExport("docx")}
+            disabled={downloading !== null}
+            className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-indigo-500/30 hover:text-white transition-all disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {downloading === "docx" ? "Generando..." : "Descargar DOCX"}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-all"
+          >
+            Imprimir
+          </button>
+        </div>
       </div>
+
+      {downloadError && (
+        <p className="-mt-4 mb-4 text-xs text-red-400 no-print">{downloadError}</p>
+      )}
+      <p className="-mt-4 mb-6 text-xs text-zinc-500 no-print">
+        «Descargar» genera el archivo en el servidor: una hoja y sin el encabezado
+        ni la URL que el navegador agrega al imprimir. Si elegís «Imprimir»,
+        desactivá “Encabezados y pies de página” en el diálogo de Chrome.
+      </p>
 
       {/* CV Document */}
       <div className="bg-white shadow-xl rounded-lg overflow-hidden print:shadow-none print:rounded-none">
-        <div className="px-10 py-8">
+        <div className="px-10 py-8 cv-sheet">
           {!hasData && (
             <div className="text-center py-16 text-neutral-400">
               <p className="text-lg">Tu CV está vacío</p>
@@ -121,7 +180,7 @@ export default function CVPreviewPage() {
 
           {data.name && (
             <h1
-              className="font-bold text-center mb-1"
+              className="font-bold text-center mb-1 uppercase"
               style={{ fontSize: SIZE.name, color: COLOR, fontFamily: FONT }}
             >
               {data.name}
@@ -133,7 +192,7 @@ export default function CVPreviewPage() {
               className="text-center mb-8"
               style={{ fontSize: SIZE.contact, color: COLOR, fontFamily: FONT, letterSpacing: "0.02em" }}
             >
-              {contactParts.join(" ● ")}
+              {contactParts.join(" • ")}
             </p>
           )}
 
@@ -148,7 +207,7 @@ export default function CVPreviewPage() {
           {education.length > 0 && (
             <Section title="EDUCACIÓN">
               {education.map((edu, i) => (
-                <div key={i} className="mb-3">
+                <div key={i} className="mb-3 cv-entry">
                   <div className="flex justify-between items-baseline">
                     <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
                       {edu.degree}
@@ -172,39 +231,33 @@ export default function CVPreviewPage() {
             </Section>
           )}
 
-          {experiences.length > 0 && (
-            <Section title="EXPERIENCIA PROFESIONAL">
-              {experiences.map((exp, i) => (
-                <div key={i} className="mb-3">
-                  <div className="flex justify-between items-baseline">
-                    <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
-                      {exp.company}
-                      {exp.title && <span className="italic font-normal"> — {exp.title}</span>}
-                    </span>
-                    <span style={{ fontSize: SIZE.date, color: COLOR, fontFamily: FONT, whiteSpace: "nowrap", marginLeft: "12px" }}>
-                      {formatDateRange(exp.start_date, exp.end_date)}
-                    </span>
-                  </div>
-                  {exp.description && (
-                    <div className="mt-1">
-                      {exp.description.split("\n").map((line, j) => (
-                        <p key={j} style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT, paddingLeft: "16px", position: "relative" as const }}>
-                          <span style={{ position: "absolute", left: 0 }}>•</span>
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
+          {jobs.length > 0 && (
+            <Section title={SECTION_EXPERIENCE}>
+              {jobs.map((exp, i) => (
+                <ExperienceEntry key={i} exp={exp} />
               ))}
             </Section>
           )}
 
-          {skills.length > 0 && (
+          {projects.length > 0 && (
+            <Section title={SECTION_PROJECTS}>
+              {projects.map((exp, i) => (
+                <ExperienceEntry key={i} exp={exp} proyecto />
+              ))}
+            </Section>
+          )}
+
+          {skillGroups.length > 0 && (
             <Section title="HABILIDADES">
-              <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {skills.map((s) => s.name).join(" | ")}
-              </p>
+              {skillGroups.map((group) => (
+                <p
+                  key={group.label}
+                  style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}
+                >
+                  <span style={{ fontWeight: 700 }}>{group.label}: </span>
+                  {group.names.join(", ")}
+                </p>
+              ))}
             </Section>
           )}
 
@@ -221,18 +274,10 @@ export default function CVPreviewPage() {
             </Section>
           )}
 
-          {programs.length > 0 && (
-            <Section title="TECNOLOGÍAS">
-              <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {programs.map((p) => p.name).join(" | ")}
-              </p>
-            </Section>
-          )}
-
           {languages.length > 0 && (
             <Section title="IDIOMAS">
               <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {languages.map((l) => `${l.name} (${l.level})`).join(" | ")}
+                {languages.map((l) => (l.level ? `${l.name} (${l.level})` : l.name)).join(", ")}
               </p>
             </Section>
           )}
@@ -240,20 +285,64 @@ export default function CVPreviewPage() {
       </div>
 
       <style jsx global>{`
+        /* mismo margen del export Harvard (MARGIN_CM = 1.27) */
+        @page {
+          size: A4;
+          margin: 12.7mm;
+        }
         @media print {
           body { background: white !important; }
-          nav, header, footer, .no-print { display: none !important; }
+          nav, header, footer, aside, .no-print { display: none !important; }
           .print\\:shadow-none { box-shadow: none !important; }
           .print\\:rounded-none { border-radius: 0 !important; }
+          /* la hoja ES el documento: nada del padding del dashboard */
+          main { padding: 0 !important; }
+          .lg\\:ml-16 { margin-left: 0 !important; }
+          .cv-sheet-outer { max-width: none !important; margin: 0 !important; }
+          .cv-sheet { padding: 0 !important; }
+          /* una entrada no se parte entre dos hojas */
+          .cv-section, .cv-entry { break-inside: avoid; }
         }
       `}</style>
     </div>
   );
 }
 
+/** Una entrada de experiencia o proyecto: organización, fechas, cargo y viñetas. */
+function ExperienceEntry({ exp, proyecto = false }: { exp: ExperienceResponse; proyecto?: boolean }) {
+  const organizacion = proyecto ? projectLabel(exp.company) : exp.company;
+  return (
+    <div className="mb-3 cv-entry">
+      <div className="flex justify-between items-baseline">
+        <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
+          {organizacion}
+        </span>
+        <span style={{ fontSize: SIZE.date, color: COLOR, fontFamily: FONT, whiteSpace: "nowrap", marginLeft: "12px" }}>
+          {formatDateRange(exp.start_date, exp.end_date)}
+        </span>
+      </div>
+      {exp.title && (
+        <p className="italic" style={{ fontSize: SIZE.body, color: COLOR, fontFamily: FONT }}>
+          {exp.title}
+        </p>
+      )}
+      {exp.description && (
+        <div className="mt-1">
+          {exp.description.split("\n").map((line, j) => (
+            <p key={j} style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT, paddingLeft: "16px", position: "relative" as const }}>
+              <span style={{ position: "absolute", left: 0 }}>•</span>
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-5">
+    <div className="mb-5 cv-section">
       <h2
         className="font-bold uppercase tracking-wide pb-1 mb-3"
         style={{ fontSize: SIZE.section, color: COLOR, borderBottom: `1.5px solid ${COLOR}`, fontFamily: FONT }}

@@ -36,10 +36,53 @@ import type {
   AddLanguageRequest,
   JobMatchResult,
   CVAdaptationResult,
+  ExportRequest,
+  ATSReportResponse,
 } from "./types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly detail: string | null;
+
+  constructor(status: number, body: string) {
+    super(`API error ${status}: ${body}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = extractDetail(body);
+  }
+}
+
+/** Extrae el `detail` que FastAPI devuelve en el cuerpo del error. */
+function extractDetail(body: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      typeof (parsed as { detail?: unknown }).detail === "string"
+    ) {
+      return (parsed as { detail: string }).detail;
+    }
+  } catch {
+    // Cuerpo no JSON (HTML de un proxy, etc.): se queda sin detail.
+  }
+  return null;
+}
+
+/** Un 404 significa que el recurso ya no existe. */
+export function isNotFoundError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}
+
+/** Mensaje apto para el usuario: el `detail` de FastAPI o uno genérico. */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.detail) return error.detail;
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
 
 async function request<T>(
   path: string,
@@ -57,7 +100,7 @@ async function request<T>(
     });
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`API error ${res.status}: ${body}`);
+      throw new ApiError(res.status, body);
     }
     return res.json() as Promise<T>;
   } finally {
@@ -203,10 +246,13 @@ export async function sendMessage(
   sessionId: string,
   data: SendMessageRequest,
 ): Promise<SendMessageResponse> {
-  return request(`/api/chat/sessions/${sessionId}/messages`, {
-    method: "POST",
-    body: jsonBody(data),
-  });
+  // El asistente tarda 26-30 s con el modelo gratuito: el default de 60 s se
+  // queda corto cuando el modelo va lento.
+  return request(
+    `/api/chat/sessions/${sessionId}/messages`,
+    { method: "POST", body: jsonBody(data) },
+    180_000,
+  );
 }
 
 export async function listSessions(
@@ -238,16 +284,74 @@ export async function deleteSession(
 
 export async function analyzeCV(
   userId: string,
-  sections?: string[],
+  jobDescription?: string,
 ): Promise<CVAnalysis> {
-  // Si sections es undefined → análisis completo
-  // Si sections es array (vacío o con items) → solo re-analizar esas secciones
-  const body = sections !== undefined ? JSON.stringify(sections) : undefined;
+  const trimmed = jobDescription?.trim();
+  const body = trimmed ? JSON.stringify({ job_description: trimmed }) : undefined;
   return request(
     `/api/chat/cv-analysis?user_id=${userId}`,
     body !== undefined
       ? { method: "POST", body, headers: { "Content-Type": "application/json" } }
       : { method: "POST" },
+    120_000,
+  );
+}
+
+// ─── CV Export & ATS Report ──────────────────────────────────────────────────
+
+function _downloadFilename(disposition: string | null, fallback: string): string {
+  if (!disposition) return fallback;
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+  return match?.[1] ?? fallback;
+}
+
+export async function exportCV(
+  req: ExportRequest,
+  timeoutMs = 120_000,
+): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/cv/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`API error ${res.status}: ${body}`);
+    }
+    const blob = await res.blob();
+    const filename = _downloadFilename(
+      res.headers.get("Content-Disposition"),
+      `CV.${req.format}`,
+    );
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function atsReport(
+  userId: string,
+  jobDescription?: string,
+): Promise<ATSReportResponse> {
+  return request(
+    "/api/cv/ats-report",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        user_id: userId,
+        job_description: jobDescription ?? null,
+      }),
+    },
     120_000,
   );
 }
@@ -385,28 +489,10 @@ export interface SkillCatalogItem {
   is_custom: boolean;
 }
 
-export async function searchSkillCatalog(
-  query: string,
-): Promise<{ results: SkillCatalogItem[] }> {
-  const params = new URLSearchParams({ q: query });
-  return request(`/api/skills-catalog/search?${params}`);
-}
-
 export async function getSkillCatalogByCategory(): Promise<{
   categories: Record<string, SkillCatalogItem[]>;
 }> {
   return request("/api/skills-catalog/by-category");
-}
-
-export async function addCustomSkillCatalog(
-  name: string,
-  category?: string,
-): Promise<{ skill: SkillCatalogItem }> {
-  const params = new URLSearchParams({ name });
-  if (category) params.set("category", category);
-  return request(`/api/skills-catalog/custom?${params}`, {
-    method: "POST",
-  });
 }
 
 // ─── Achievements ────────────────────────────────────────────────────────────

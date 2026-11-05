@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from models.cv_analysis import StructureMetrics, MetricDetail
 
@@ -13,6 +13,15 @@ def _status(score: float) -> str:
     return "poor"
 
 
+def _as_aware_datetime(value: date | datetime | None) -> datetime | None:
+    """Normaliza fecha o datetime (con o sin tz) a datetime con UTC."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return datetime.combine(value, datetime.min.time(), tzinfo=timezone.utc)
+
+
 def analyze_structure(cv_data: dict) -> StructureMetrics:
     details: list[MetricDetail] = []
     total = 0.0
@@ -23,13 +32,10 @@ def analyze_structure(cv_data: dict) -> StructureMetrics:
     if experiences:
         most_recent = None
         for e in experiences:
-            sd = e["start_date"]
-            if sd is not None:
-                if most_recent is None or sd > most_recent:
-                    most_recent = sd
+            sd = _as_aware_datetime(e["start_date"])
+            if sd is not None and (most_recent is None or sd > most_recent):
+                most_recent = sd
         if most_recent:
-            if most_recent.tzinfo is None:
-                most_recent = most_recent.replace(tzinfo=timezone.utc)
             years_ago = (now - most_recent).days / 365.25
             if years_ago <= 2:
                 recency_score = recency_pts

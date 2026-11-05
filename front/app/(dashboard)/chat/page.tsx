@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/app/lib/auth";
+import { apiErrorMessage } from "@/app/lib/api";
 import {
   listSessions,
   createChatSession,
@@ -146,8 +147,25 @@ export default function ChatPage() {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("Completa tu CV") || msg.includes("CV no encontrado")) {
         setChatError("Necesitás completar tu CV primero. Ve a \"Editar CV\" para agregar tu información.");
+      } else if (msg.includes("503") || msg.includes("cupo diario")) {
+        setChatError(
+          apiErrorMessage(
+            err,
+            "Se agotó el cupo diario de modelos gratuitos. Esperá al reinicio o agregá créditos.",
+          ),
+        );
       } else if (msg.includes("502") || msg.includes("Error del asistente")) {
         setChatError("El asistente está teniendo problemas. Intentá de nuevo en un momento.");
+      } else if (msg.includes("500") || msg.includes("Error interno")) {
+        setChatError("El servidor tuvo un error. Intentá de nuevo en unos segundos.");
+      } else if (
+        msg.includes("NetworkError") ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch")
+      ) {
+        setChatError(
+          "No pude conectar con el servidor. Revisá que el backend esté corriendo e intentá de nuevo.",
+        );
       } else {
         setChatError(`Error: ${msg}`);
       }

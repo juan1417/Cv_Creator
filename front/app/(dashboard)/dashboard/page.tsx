@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/app/lib/auth";
 import { getFullCV, listSessions } from "@/app/lib/api";
 import type { FullCV, ChatSessionListResponse } from "@/app/lib/types";
+import { cvCompleteness, cvSections } from "@/app/lib/cv-validation";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -37,19 +38,7 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const hasCv = !!cv;
-  const cvCompleteness = hasCv
-    ? Math.round(
-        ((cv!.cv.name ? 1 : 0) +
-          (cv!.cv.email ? 1 : 0) +
-          (cv!.cv.phone ? 1 : 0) +
-          (cv!.cv.about ? 1 : 0) +
-          (cv!.experiences.length > 0 ? 1 : 0) +
-          (cv!.skills.length > 0 ? 1 : 0) +
-          (cv!.education.length > 0 ? 1 : 0)) /
-          7 *
-          100
-      )
-    : 0;
+  const completeness = hasCv ? cvCompleteness(cv!) : 0;
 
   const recentSessions = sessions?.sessions?.slice(0, 5) ?? [];
   const totalSessions = sessions?.sessions?.length ?? 0;
@@ -64,20 +53,15 @@ export default function DashboardPage() {
       ]
     : [];
 
-  const cvSections = hasCv
-    ? [
-        { name: "Datos personales", filled: !!(cv!.cv.name && cv!.cv.email), href: "/cv/edit" },
-        { name: "Experiencia", filled: cv!.experiences.length > 0, href: "/cv/edit" },
-        { name: "Skills técnicas", filled: cv!.skills.some((s) => s.type !== "soft"), href: "/cv/edit" },
-        { name: "Skills blandas", filled: cv!.skills.some((s) => s.type === "soft"), href: "/cv/edit" },
-        { name: "Formación", filled: cv!.education.length > 0, href: "/cv/edit" },
-        { name: "Logros", filled: cv!.achievements.length > 0, href: "/cv/edit" },
-        { name: "Programas", filled: cv!.programs.length > 0, href: "/cv/edit" },
-        { name: "Idiomas", filled: cv!.languages.length > 0, href: "/cv/edit" },
-      ]
+  const sectionCards = hasCv
+    ? cvSections(cv!).map((section) => ({
+        ...section,
+        name: section.label,
+        href: "/cv/edit",
+      }))
     : [];
 
-  const filledSections = cvSections.filter((s) => s.filled).length;
+  const filledSections = sectionCards.filter((s) => s.filled).length;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -90,6 +74,34 @@ export default function DashboardPage() {
           Gestiona tu CV y potencíá tu búsqueda laboral
         </p>
       </div>
+
+      {/* CV recién creado: invitar al asistente paso a paso */}
+      {hasCv && !loading && completeness === 0 && (
+        <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-white">
+            Armá tu CV paso a paso
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm text-zinc-300">
+            Seis pasos cortos —datos, experiencia, formación, habilidades, logros
+            y revisión—. Se guarda en cada paso, así que podés salir y volver
+            justo donde quedaste.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="/cv/create"
+              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all"
+            >
+              Empezar el asistente
+            </Link>
+            <Link
+              href="/cv/edit"
+              className="rounded-xl border border-zinc-700 bg-zinc-800/60 px-5 py-2.5 text-sm font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-all"
+            >
+              Prefiero el editor completo
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Top cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -115,17 +127,17 @@ export default function DashboardPage() {
                 <div className="flex-1 h-2.5 bg-zinc-800 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ${
-                      cvCompleteness >= 70 ? "bg-emerald-500" : cvCompleteness >= 40 ? "bg-amber-500" : "bg-red-500"
+                      completeness >= 70 ? "bg-emerald-500" : completeness >= 40 ? "bg-amber-500" : "bg-red-500"
                     }`}
-                    style={{ width: `${cvCompleteness}%` }}
+                    style={{ width: `${completeness}%` }}
                   />
                 </div>
-                <span className="text-sm font-bold text-white">{cvCompleteness}%</span>
+                <span className="text-sm font-bold text-white">{completeness}%</span>
               </div>
               <p className="text-xs text-zinc-500">
-                {cvCompleteness === 100
+                {completeness === 100
                   ? "Tu CV está completo"
-                  : `${7 - Math.round(cvCompleteness / 100 * 7)} secciones pendientes`}
+                  : `${7 - Math.round(completeness / 100 * 7)} secciones pendientes`}
               </p>
             </div>
           ) : (
@@ -250,7 +262,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-white">Secciones del CV</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">{filledSections}/{cvSections.length} completadas</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{filledSections}/{sectionCards.length} completadas</p>
               </div>
               <Link
                 href="/cv/edit"
@@ -260,7 +272,7 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {cvSections.map((section) => (
+              {sectionCards.map((section) => (
                 <Link
                   key={section.name}
                   href={section.href}
@@ -301,7 +313,7 @@ export default function DashboardPage() {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-xl">
             <h3 className="font-semibold text-white mb-4">Mejorá tu CV</h3>
             <div className="space-y-3">
-              {cvCompleteness < 100 && (
+              {completeness < 100 && (
                 <TipCard
                   icon={<svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>}
                   title="Completá las secciones faltantes"
@@ -349,7 +361,7 @@ export default function DashboardPage() {
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link
-              href="/cv/edit"
+              href="/cv/create"
               className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all"
             >
               Crear mi CV
