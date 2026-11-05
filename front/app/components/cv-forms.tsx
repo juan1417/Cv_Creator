@@ -1103,6 +1103,7 @@ export function SkillPicker({
             items={skills.map((skill) => ({
               id: skill.id,
               label: skill.name,
+              meta: skill.category || "Otros conocimientos",
             }))}
             onDelete={handleDelete}
             deleteLabel={(label) => `Quitar ${label}`}

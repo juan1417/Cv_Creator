@@ -265,11 +265,14 @@ export default function CVEditPage() {
 
       {/* ── Secciones (módulos compartidos con el asistente) ────────────── */}
       <ExperienceManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Experiencia" subtitle="Puestos, proyectos o freelance" />
-      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="tech" title="Tecnologías" subtitle="Lenguajes, frameworks y herramientas técnicas" />
-      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="soft" title="Skills Adicionales" subtitle="Habilidades blandas y competencias" />
+      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="tech" title="Habilidades técnicas"
+        subtitle="Van a HABILIDADES del CV, agrupadas por categoría (Lenguajes, Backend, DevOps…)" />
+      <SkillPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} type="soft" title="Habilidades blandas"
+        subtitle="Aparecen al final de HABILIDADES, en su propia línea" />
       <EducationManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Formación" subtitle="Carreras, tecnicaturas y certificaciones" />
       <AchievementManager cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Logros Destacados" subtitle="Premios, publicaciones y proyectos propios" />
-      <ProgramPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Programas" subtitle="Herramientas, cursos y certificaciones" />
+      <ProgramPicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Programas y metodologías"
+        subtitle="También viven en HABILIDADES, bajo «Otros conocimientos»" />
       <LanguagePicker cv={cv} userId={user!.id} onChanged={refreshCV} onError={setError} onLocal={patchCv} title="Idiomas" subtitle="Nivel con estándar europeo si lo tenés" />
     </div>
   );

@@ -11,8 +11,8 @@ export function SkillsStep({ cv, userId, onChanged, onLocal, onAdvance }: StepPr
   return (
     <div className="space-y-4">
       <p className="text-sm text-[#94A3B8]">
-        Las habilidades técnicas son las que un filtro ATS más busca. Si todavía
-        no tenés ninguna, podés avanzar.
+        Todo esto va a una sola sección del CV, HABILIDADES, con una línea por
+        categoría. Las técnicas son las que más pesan en un filtro ATS.
       </p>
 
       <SkillPicker
@@ -21,7 +21,7 @@ export function SkillsStep({ cv, userId, onChanged, onLocal, onAdvance }: StepPr
         onChanged={onChanged}
         onLocal={onLocal}
         type="tech"
-        subtitle="Lenguajes, frameworks, bases de datos y herramientas"
+        subtitle="Habilidades técnicas: cada una cae en su categoría dentro de HABILIDADES"
         plain
       />
       <SkillPicker
@@ -30,7 +30,7 @@ export function SkillsStep({ cv, userId, onChanged, onLocal, onAdvance }: StepPr
         onChanged={onChanged}
         onLocal={onLocal}
         type="soft"
-        subtitle="Cómo trabajás: comunicación, liderazgo, organización"
+        subtitle="Habilidades blandas: aparecen en su propia línea de HABILIDADES"
         plain
       />
       <ProgramPicker
@@ -38,7 +38,7 @@ export function SkillsStep({ cv, userId, onChanged, onLocal, onAdvance }: StepPr
         userId={userId}
         onChanged={onChanged}
         onLocal={onLocal}
-        subtitle="Herramientas, cursos y certificaciones (sección TECNOLOGÍAS)"
+        subtitle="Cursos, certificaciones y metodologías: entran en «Otros conocimientos»"
         plain
       />
 

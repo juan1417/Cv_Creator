@@ -18,11 +18,11 @@ Branch: `feat/ats-harvard-export` · Delivery: work units en la feature branch �
 
 | ID | Specs | Route | Status | Commit |
 |----|-------|-------|--------|--------|
-| T1 | S5,S6 | inline | pending | — |
-| T2 | S2,S3,S4,S7 | inline | pending | — |
-| T3 | S3,S7 | inline | pending | — |
-| T4 | S8 | inline | pending | — |
-| T5 | S9 | inline | pending | — |
+| T1 | S5,S6 | inline | done | d5d7a87 |
+| T2 | S2,S3,S4,S7 | inline | done | d5d7a87 |
+| T3 | S3,S7 | inline | done | (este commit) |
+| T4 | S8 | inline | done | (este commit) |
+| T5 | S9 | inline | done | d5d7a87 |
 
 - **T1** — `get_user_cv_data` devuelve `category` por skill (mapa del catálogo, una sola consulta) y `SkillResponse`/`CvData.Skill` la exponen.
 - **T2** — `harvard.py`: `_skills_line` pasa a `_skills_lines` (líneas por categoría, orden fijo), desaparece la sección TECNOLOGÍAS, y `build_layout`/`expected_fragments` se ajustan.
@@ -38,3 +38,8 @@ Branch: `feat/ats-harvard-export` · Delivery: work units en la feature branch �
 - **L4 (2026-11-05, medición):** el catálogo (`skillcatalog`, 107 filas, 9 categorías) cubre 14 de las 16 skills del usuario; `.NET` y `Podman` no figuran, y "Scrum"/"metodologias agiles" tampoco. Por eso S6 define líneas de rebrote en vez de exigir que todo exista en el catálogo.
 - **L5 (2026-11-05, decisión):** sin columnas literales ni tabla en el DOCX: la validación ATS (`ats_validation.validate_docx_bytes`) marca como problema cualquier `document.tables`, y el propio pedido del usuario exige una sola columna. Se usa "etiqueta: valores" por línea.
 - **L6 (2026-11-05, decisión):** categoría derivada en lectura, no persistida. Si mañana se quiere editable por el usuario, hace falta columna `category` en `skills` + ALTER TABLE explícito (el proyecto no tiene migraciones), y eso es otro cambio con su propio riesgo.
+- **L7 (2026-11-05, bug encontrado en el camino):** las líneas con etiqueta se armaban en el layout pero **no aparecían en el DOCX ni en el PDF**, porque ambos renderers de `kind === "text"` leían sólo `item.text` e ignoraban `segments`. Se arregló en los dos renderers y se fijó con `test_habilidades_aparecen_agrupadas_en_docx_y_pdf` (antes de esto ningún test lo detectaba).
+- **L8 (2026-11-05, evidencia):** `pytest` → **42 passed** (39 previos + 3 nuevos). Texto extraído del PDF generado para el CV real: `Lenguajes: Python, C#, JavaScript, TypeScript` / `Frontend: React, Vue.js` / `Backend: FastAPI, Django, ASP.NET, Node.js` / `Bases de Datos: PostgreSQL` / `DevOps y Cloud: Docker` / `Herramientas: Git, GitHub` / `Otros conocimientos: .NET, Podman, Scrum, metodologias agiles`, con validación ATS OK en PDF y DOCX y sin tablas. Vista previa verificada en navegador con datos interceptados: mismas líneas, y `TECNOLOGÍAS` ya no aparece.
+- **L9 (2026-11-05, límite):** el campo `category` lo devuelve la API (`SkillResponse`, `get_user_cv_data`), así que **hace falta reiniciar `uv run client`** para que las habilidades se agrupen de verdad; sin reinicio todo cae en "Otros conocimientos".
+- **L10 (2026-11-05, decisión):** `normalize()` estaba duplicada en `IA_rag/metrics/keywords.py` y `Cv_made/ats_validation.py`; pasó a `client/src/text_norm.py`, usado también por el mapa de categorías.
+

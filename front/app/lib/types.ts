@@ -106,6 +106,8 @@ export interface SkillResponse {
   id: string;
   name: string;
   level: string;
+  /** Categoría derivada del catálogo; define en qué línea del CV aparece. */
+  category?: string;
   type: string;
 }
 

@@ -195,7 +195,7 @@ export function cvSections(cv: FullCV): CvSectionStatus[] {
     { key: "soft_skills", label: "Skills blandas", filled: cv.skills.some((s) => s.type === "soft") },
     { key: "education", label: "Formación", filled: cv.education.length > 0 },
     { key: "achievements", label: "Logros", filled: cv.achievements.length > 0 },
-    { key: "programs", label: "Programas", filled: cv.programs.length > 0 },
+    { key: "programs", label: "Programas y metodologías", filled: cv.programs.length > 0 },
     { key: "languages", label: "Idiomas", filled: cv.languages.length > 0 },
   ];
 }

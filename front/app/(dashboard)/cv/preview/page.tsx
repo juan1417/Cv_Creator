@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth";
 import { getFullCV } from "@/app/lib/api";
 import type { FullCV } from "@/app/lib/types";
+import { groupSkills } from "@/app/lib/cv-skill-groups";
 
 const FONT = "'Arial', 'Helvetica Neue', Helvetica, sans-serif";
 const COLOR = "#404040";
@@ -70,6 +71,8 @@ export default function CVPreviewPage() {
     achievements.length ||
     programs.length ||
     languages.length;
+
+  const skillGroups = groupSkills(skills, programs);
 
   const contactParts = [
     data.address,
@@ -204,11 +207,17 @@ export default function CVPreviewPage() {
             </Section>
           )}
 
-          {skills.length > 0 && (
+          {skillGroups.length > 0 && (
             <Section title="HABILIDADES">
-              <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {skills.map((s) => s.name).join(", ")}
-              </p>
+              {skillGroups.map((group) => (
+                <p
+                  key={group.label}
+                  style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}
+                >
+                  <span style={{ fontWeight: 700 }}>{group.label}: </span>
+                  {group.names.join(", ")}
+                </p>
+              ))}
             </Section>
           )}
 
@@ -222,14 +231,6 @@ export default function CVPreviewPage() {
                   </p>
                 </div>
               ))}
-            </Section>
-          )}
-
-          {programs.length > 0 && (
-            <Section title="TECNOLOGÍAS">
-              <p style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT }}>
-                {programs.map((p) => p.name).join(", ")}
-              </p>
             </Section>
           )}
 
