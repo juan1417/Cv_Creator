@@ -32,7 +32,12 @@ export default function CVPreviewPage() {
   useEffect(() => {
     if (!user) return;
     getFullCV(user.id)
-      .then(setCV)
+      .then((data) => {
+        setCV(data);
+        // Chrome imprime el título del documento en el encabezado de la hoja:
+        // mejor el nombre del candidato que "CV Creator" + la URL del server.
+        document.title = `CV — ${data.cv.name || "Sin nombre"}`;
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
@@ -89,7 +94,7 @@ export default function CVPreviewPage() {
   ].filter(Boolean);
 
   return (
-    <div className="max-w-[800px] mx-auto">
+    <div className="max-w-[800px] mx-auto cv-sheet-outer">
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6 no-print">
         <button
@@ -111,7 +116,7 @@ export default function CVPreviewPage() {
 
       {/* CV Document */}
       <div className="bg-white shadow-xl rounded-lg overflow-hidden print:shadow-none print:rounded-none">
-        <div className="px-10 py-8">
+        <div className="px-10 py-8 cv-sheet">
           {!hasData && (
             <div className="text-center py-16 text-neutral-400">
               <p className="text-lg">Tu CV está vacío</p>
@@ -157,7 +162,7 @@ export default function CVPreviewPage() {
           {education.length > 0 && (
             <Section title="EDUCACIÓN">
               {education.map((edu, i) => (
-                <div key={i} className="mb-3">
+                <div key={i} className="mb-3 cv-entry">
                   <div className="flex justify-between items-baseline">
                     <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
                       {edu.degree}
@@ -235,11 +240,23 @@ export default function CVPreviewPage() {
       </div>
 
       <style jsx global>{`
+        /* mismo margen del export Harvard (MARGIN_CM = 1.27) */
+        @page {
+          size: A4;
+          margin: 12.7mm;
+        }
         @media print {
           body { background: white !important; }
-          nav, header, footer, .no-print { display: none !important; }
+          nav, header, footer, aside, .no-print { display: none !important; }
           .print\\:shadow-none { box-shadow: none !important; }
           .print\\:rounded-none { border-radius: 0 !important; }
+          /* la hoja ES el documento: nada del padding del dashboard */
+          main { padding: 0 !important; }
+          .lg\\:ml-16 { margin-left: 0 !important; }
+          .cv-sheet-outer { max-width: none !important; margin: 0 !important; }
+          .cv-sheet { padding: 0 !important; }
+          /* una entrada no se parte entre dos hojas */
+          .cv-section, .cv-entry { break-inside: avoid; }
         }
       `}</style>
     </div>
@@ -249,7 +266,7 @@ export default function CVPreviewPage() {
 /** Una entrada de experiencia o proyecto: organización, fechas, cargo y viñetas. */
 function ExperienceEntry({ exp }: { exp: ExperienceResponse }) {
   return (
-    <div className="mb-3">
+    <div className="mb-3 cv-entry">
       <div className="flex justify-between items-baseline">
         <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
           {exp.company}
@@ -279,7 +296,7 @@ function ExperienceEntry({ exp }: { exp: ExperienceResponse }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-5">
+    <div className="mb-5 cv-section">
       <h2
         className="font-bold uppercase tracking-wide pb-1 mb-3"
         style={{ fontSize: SIZE.section, color: COLOR, borderBottom: `1.5px solid ${COLOR}`, fontFamily: FONT }}

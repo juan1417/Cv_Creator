@@ -22,6 +22,13 @@ def test_renderers_return_bytes_not_files(cv, tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
+def test_mes_unico_no_se_repite():
+    """Un hackathon de 48 horas dentro del mismo mes debe leerse "may 2025"."""
+    assert format_date("2025-05-20", "2025-05-21") == "may 2025"
+    assert format_date("2025-05-20", "2025-06-01") == "may 2025 - jun 2025"
+    assert format_date("2025-05-20", "2025-05-20") == "may 2025"
+
+
 def test_format_date_is_spanish_and_locale_independent():
     assert format_date("2023-03-01", None) == "mar 2023 - Presente"
     assert format_date("2019-01-01", "2021-02-01") == "ene 2019 - feb 2021"

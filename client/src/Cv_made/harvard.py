@@ -134,7 +134,11 @@ def format_date(start: str | None, end: str | None) -> str:
         return render(end_parsed)
     if end_parsed is None:
         return f"{render(start_parsed)} - Presente"
-    return f"{render(start_parsed)} - {render(end_parsed)}"
+    inicio, fin = render(start_parsed), render(end_parsed)
+    # un evento de 48 horas dentro del mismo mes no es "may 2025 - may 2025"
+    if inicio == fin:
+        return inicio
+    return f"{inicio} - {fin}"
 
 
 # ---------------------------------------------------------------------------
