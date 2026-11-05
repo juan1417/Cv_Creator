@@ -144,3 +144,85 @@ def test_categorias_fuera_de_lista_no_se_pierden():
     planas = ", ".join(", ".join(names) for _, names in grupos)
     for nombre in ("Python", "Comunicación", "Inglés"):
         assert nombre in planas
+
+
+# ─── PROYECTOS DESTACADOS separados de la experiencia laboral ─────────────────
+
+def _cv_con_proyecto_y_empleo() -> CvData:
+    return CvData(
+        name="Ana Pérez",
+        email="ana@example.com",
+        experience=[
+            {
+                "company": "Banco XYZ",
+                "title": "Analista",
+                "start_date": "2024-03-01",
+                "end_date": None,
+                "description": "Mantenimiento de reportes.",
+            },
+            {
+                "company": "Cv_Creator (Proyecto Personal)",
+                "title": "Desarrollador full stack",
+                "start_date": "2026-09-04",
+                "end_date": None,
+                "description": "Aplicación web con formularios validados.",
+            },
+        ],
+    )
+
+
+def _entradas_por_seccion(cv: CvData) -> dict[str, list[str]]:
+    """Las entradas del layout agrupadas bajo el encabezado que les toca."""
+    entradas: dict[str, list[str]] = {}
+    actual = None
+    for item in build_layout(cv):
+        if item.kind == "heading":
+            actual = item.text
+            entradas.setdefault(actual, [])
+        elif item.kind == "entry" and actual is not None:
+            entradas[actual].append(item.left)
+    return entradas
+
+
+def test_proyecto_personal_va_en_su_propia_seccion():
+    entradas = _entradas_por_seccion(_cv_con_proyecto_y_empleo())
+
+    # el marcador se lee sin importar mayúsculas/minúsculas
+    assert entradas["EXPERIENCIA PROFESIONAL"] == ["Banco XYZ"]
+    assert entradas["PROYECTOS DESTACADOS"] == ["Cv_Creator (Proyecto Personal)"]
+
+
+def test_el_orden_de_las_secciones_es_experiencia_y_luego_proyectos():
+    headings = [i.text for i in build_layout(_cv_con_proyecto_y_empleo()) if i.kind == "heading"]
+
+    assert headings.index("EXPERIENCIA PROFESIONAL") < headings.index("PROYECTOS DESTACADOS")
+
+
+def test_se_imprime_solo_la_seccion_que_tiene_entradas():
+    cv = _cv_con_proyecto_y_empleo()
+    cv.experience = [cv.experience[1]]
+    headings = [i.text for i in build_layout(cv) if i.kind == "heading"]
+    assert headings == ["PROYECTOS DESTACADOS"]
+
+    cv2 = _cv_con_proyecto_y_empleo()
+    cv2.experience = [cv2.experience[0]]
+    headings2 = [i.text for i in build_layout(cv2) if i.kind == "heading"]
+    assert headings2 == ["EXPERIENCIA PROFESIONAL"]
+
+
+def test_seccion_de_proyectos_se_ve_en_docx_y_pdf():
+    cv = _cv_con_proyecto_y_empleo()
+    docx_text = "\n".join(
+        p.text for p in Document(BytesIO(render_docx(cv))).paragraphs
+    )
+    pdf_text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(render_pdf(cv))).pages
+    )
+    for texto in (docx_text, pdf_text):
+        assert "PROYECTOS DESTACADOS" in texto
+        assert "EXPERIENCIA PROFESIONAL" in texto
+
+    # la validación del export exige todos los encabezados que genera el layout
+    result = validate_export(render_pdf(cv), "pdf", expected_fragments(cv))
+    assert result.ok, result.problems
+    assert result.missing == []

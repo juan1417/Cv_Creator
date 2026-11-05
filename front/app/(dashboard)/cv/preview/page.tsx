@@ -4,8 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth";
 import { getFullCV } from "@/app/lib/api";
-import type { FullCV } from "@/app/lib/types";
+import type { ExperienceResponse, FullCV } from "@/app/lib/types";
 import { groupSkills } from "@/app/lib/cv-skill-groups";
+import {
+  SECTION_EXPERIENCE,
+  SECTION_PROJECTS,
+  splitExperience,
+} from "@/app/lib/cv-experience-split";
 
 const FONT = "'Arial', 'Helvetica Neue', Helvetica, sans-serif";
 const COLOR = "#404040";
@@ -56,6 +61,7 @@ export default function CVPreviewPage() {
 
   const data = cv.cv;
   const experiences = cv.experiences || [];
+  const { jobs, projects } = splitExperience(experiences);
   const education = cv.education || [];
   const skills = cv.skills || [];
   const achievements = cv.achievements || [];
@@ -175,34 +181,18 @@ export default function CVPreviewPage() {
             </Section>
           )}
 
-          {experiences.length > 0 && (
-            <Section title="EXPERIENCIA PROFESIONAL">
-              {experiences.map((exp, i) => (
-                <div key={i} className="mb-3">
-                  <div className="flex justify-between items-baseline">
-                    <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
-                      {exp.company}
-                    </span>
-                    <span style={{ fontSize: SIZE.date, color: COLOR, fontFamily: FONT, whiteSpace: "nowrap", marginLeft: "12px" }}>
-                      {formatDateRange(exp.start_date, exp.end_date)}
-                    </span>
-                  </div>
-                  {exp.title && (
-                    <p className="italic" style={{ fontSize: SIZE.body, color: COLOR, fontFamily: FONT }}>
-                      {exp.title}
-                    </p>
-                  )}
-                  {exp.description && (
-                    <div className="mt-1">
-                      {exp.description.split("\n").map((line, j) => (
-                        <p key={j} style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT, paddingLeft: "16px", position: "relative" as const }}>
-                          <span style={{ position: "absolute", left: 0 }}>•</span>
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
+          {jobs.length > 0 && (
+            <Section title={SECTION_EXPERIENCE}>
+              {jobs.map((exp, i) => (
+                <ExperienceEntry key={i} exp={exp} />
+              ))}
+            </Section>
+          )}
+
+          {projects.length > 0 && (
+            <Section title={SECTION_PROJECTS}>
+              {projects.map((exp, i) => (
+                <ExperienceEntry key={i} exp={exp} />
               ))}
             </Section>
           )}
@@ -252,6 +242,37 @@ export default function CVPreviewPage() {
           .print\\:rounded-none { border-radius: 0 !important; }
         }
       `}</style>
+    </div>
+  );
+}
+
+/** Una entrada de experiencia o proyecto: organización, fechas, cargo y viñetas. */
+function ExperienceEntry({ exp }: { exp: ExperienceResponse }) {
+  return (
+    <div className="mb-3">
+      <div className="flex justify-between items-baseline">
+        <span className="font-bold" style={{ fontSize: SIZE.heading, color: COLOR, fontFamily: FONT }}>
+          {exp.company}
+        </span>
+        <span style={{ fontSize: SIZE.date, color: COLOR, fontFamily: FONT, whiteSpace: "nowrap", marginLeft: "12px" }}>
+          {formatDateRange(exp.start_date, exp.end_date)}
+        </span>
+      </div>
+      {exp.title && (
+        <p className="italic" style={{ fontSize: SIZE.body, color: COLOR, fontFamily: FONT }}>
+          {exp.title}
+        </p>
+      )}
+      {exp.description && (
+        <div className="mt-1">
+          {exp.description.split("\n").map((line, j) => (
+            <p key={j} style={{ fontSize: SIZE.body, color: COLOR, lineHeight: "1.6", fontFamily: FONT, paddingLeft: "16px", position: "relative" as const }}>
+              <span style={{ position: "absolute", left: 0 }}>•</span>
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

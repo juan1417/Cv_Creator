@@ -470,6 +470,7 @@ export function ExperienceManager({
               onChange={setField("company")}
               error={errors.company}
               placeholder="Acme S.A. · Freelance · Proyecto personal"
+              hint="Si escribís «proyecto personal», se lista en PROYECTOS DESTACADOS"
               required
             />
             <DateField

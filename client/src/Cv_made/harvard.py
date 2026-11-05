@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Literal
 
+from text_norm import normalize
+
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
@@ -63,9 +65,16 @@ CONTACT_SIZE_PT = 10.0
 SECTION_SUMMARY = "PERFIL PROFESIONAL"
 SECTION_EDUCATION = "EDUCACIÓN"
 SECTION_EXPERIENCE = "EXPERIENCIA PROFESIONAL"
+SECTION_PROJECTS = "PROYECTOS DESTACADOS"
 SECTION_SKILLS = "HABILIDADES"
 SECTION_ACHIEVEMENTS = "LOGROS DESTACADOS"
 SECTION_LANGUAGES = "IDIOMAS"
+
+# La base de datos no tiene un campo `tipo` en la experiencia (y el proyecto no
+# usa migraciones), así que el marcador vive en el texto de `company`: una
+# entrada es proyecto personal cuando ese texto dice "proyecto personal", sin
+# importar mayúsculas ni acentos. Lo que no está marcado sigue siendo empleo.
+PROJECT_MARKER = "proyecto personal"
 
 # Orden estable de las líneas de HABILIDADES. Lo que no aparece acá (o no está
 # en el catálogo) cae en "Otros conocimientos"; las blandas siempre al final.
@@ -131,6 +140,22 @@ def format_date(start: str | None, end: str | None) -> str:
 # ---------------------------------------------------------------------------
 # Layout compartido
 # ---------------------------------------------------------------------------
+
+def is_personal_project(company: str | None) -> bool:
+    """La entrada es un proyecto personal si `company` lleva el marcador.
+
+    Reusa la normalización del ATS (minúsculas, sin acentos, espacios colapsados)
+    para que "Proyecto Personal", "PROYECTO  PERSONAL" y "(proyecto personal)"
+    se lean igual.
+    """
+    return PROJECT_MARKER in normalize(company or "")
+
+
+def split_experience(experience) -> tuple[list, list]:
+    """Separa (empleos, proyectos) sin perder el orden original."""
+    jobs = [e for e in experience if not is_personal_project(e.company)]
+    projects = [e for e in experience if is_personal_project(e.company)]
+    return jobs, projects
 
 LayoutKind = Literal["name", "contact", "heading", "text", "entry", "bullet", "spacer"]
 
@@ -262,20 +287,27 @@ def build_layout(cv: CvData) -> list[LayoutItem]:
                 items.append(LayoutItem(kind="bullet", segments=[(line, False, False)]))
 
     if cv.experience:
-        items.append(LayoutItem(kind="heading", text=SECTION_EXPERIENCE))
-        for experience in cv.experience:
-            items.append(LayoutItem(
-                kind="entry",
-                left=(experience.company or "").strip(),
-                right=format_date(experience.start_date, experience.end_date),
-            ))
-            title = (experience.title or "").strip()
-            if title:
+        jobs, projects = split_experience(cv.experience)
+        for entries, heading in (
+            (jobs, SECTION_EXPERIENCE),
+            (projects, SECTION_PROJECTS),
+        ):
+            if not entries:
+                continue
+            items.append(LayoutItem(kind="heading", text=heading))
+            for experience in entries:
                 items.append(LayoutItem(
-                    kind="bullet", segments=[(title, False, True)]
+                    kind="entry",
+                    left=(experience.company or "").strip(),
+                    right=format_date(experience.start_date, experience.end_date),
                 ))
-            for line in _split_lines(experience.description):
-                items.append(LayoutItem(kind="bullet", segments=[(line, False, False)]))
+                title = (experience.title or "").strip()
+                if title:
+                    items.append(LayoutItem(
+                        kind="bullet", segments=[(title, False, True)]
+                    ))
+                for line in _split_lines(experience.description):
+                    items.append(LayoutItem(kind="bullet", segments=[(line, False, False)]))
 
     skill_groups = _skill_groups(cv)
     if skill_groups:
