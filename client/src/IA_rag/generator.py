@@ -8,6 +8,19 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+RATE_LIMIT_MESSAGE = (
+    "Se agotó el cupo diario de modelos gratuitos de OpenRouter. "
+    "Esperá al reinicio diario o agregá créditos para subir el límite."
+)
+
+
+class RateLimitError(RuntimeError):
+    """OpenRouter rechazó el pedido por cupo diario agotado (429).
+
+    Es el único error que no se reintenta: repetir contra un rate limit
+    triples el consumo del cupo y demora el aviso sin ninguna chance de éxito.
+    """
+
 _client: OpenAI | None = None
 
 
@@ -64,7 +77,11 @@ def generate_response(
                 attempt + 1, kwargs["max_tokens"], budget,
             )
         except Exception as e:
-            last_error = str(e)
+            text = str(e)
+            if "429" in text and "rate limit" in text.lower():
+                logger.warning("Rate limit alcanzado, no se reintenta: %s", text[:200])
+                raise RateLimitError(RATE_LIMIT_MESSAGE) from e
+            last_error = text
             logger.warning(f"Attempt {attempt + 1}: {last_error}")
 
         if attempt < max_retries:

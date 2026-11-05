@@ -20,6 +20,7 @@ from models.education import Education
 from models.achievement import Achievement
 from models.program import Program
 from models.language import Language
+from IA_rag.generator import RateLimitError
 from IA_rag.job_matcher import compare_cv_job, adapt_cv_for_job
 from IA_rag.metrics import analyze_ats
 from models.cv_analysis import ATSMetrics
@@ -377,6 +378,8 @@ async def compare_job(req: CompareJobRequest):
     try:
         result = compare_cv_job(req.user_id, req.job_description)
         return result
+    except RateLimitError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -389,6 +392,8 @@ async def adapt_job(req: AdaptJobRequest):
     try:
         result = adapt_cv_for_job(req.user_id, req.job_description, req.missing_skills)
         return result
+    except RateLimitError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

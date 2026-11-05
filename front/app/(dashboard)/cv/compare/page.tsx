@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useAuth } from "@/app/lib/auth";
-import { compareCVJob, adaptCVForJob, exportCV, atsReport } from "@/app/lib/api";
+import {
+  apiErrorMessage,
+  atsReport,
+  compareCVJob,
+  adaptCVForJob,
+  exportCV,
+} from "@/app/lib/api";
 import type {
   ATSMetricGroup,
   CVAdaptationResult,
@@ -38,8 +44,7 @@ export default function ComparePage() {
       setAtsMetrics(ats.ats);
       setStep("results");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Error: ${msg}`);
+      setError(apiErrorMessage(err, "El servicio no respondió. Intentá de nuevo."));
     } finally {
       setLoading(false);
     }
@@ -63,8 +68,7 @@ export default function ComparePage() {
       setAdaptResult(result);
       setStep("adapted");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Error: ${msg}`);
+      setError(apiErrorMessage(err, "El servicio no respondió. Intentá de nuevo."));
     } finally {
       setLoading(false);
     }
@@ -85,8 +89,7 @@ export default function ComparePage() {
         adapted_skills: adaptResult.adapted_skills,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Error al descargar: ${msg}`);
+      setError(apiErrorMessage(err, "No se pudo generar el archivo"));
     } finally {
       setDownloading(null);
     }

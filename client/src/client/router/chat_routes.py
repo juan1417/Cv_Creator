@@ -7,6 +7,7 @@ import asyncio
 
 from database.DB import get_engine
 from models.chat import ChatSession, ChatMessage
+from IA_rag.generator import RateLimitError
 from IA_rag.orchestrator import chat as rag_chat
 from IA_rag.cv_analyzer import analyze_cv
 from IA_rag.cv_editor import (
@@ -146,6 +147,8 @@ async def send_message(session_id: UUID, req: SendMessageRequest):
             session_id=session_id,
         )
         return ChatResponse(**result)
+    except RateLimitError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
         msg = str(e)
         if "no encontrada" in msg or "CV" in msg:

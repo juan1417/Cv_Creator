@@ -16,7 +16,7 @@ from uuid import UUID
 from database.get_user_cv import get_user_cv_data
 from models.cv_analysis import CVAnalysis, MetricDetail
 
-from .generator import generate_response
+from .generator import RateLimitError, generate_response
 from .metrics import (
     analyze_ats,
     analyze_completeness,
@@ -230,6 +230,11 @@ puntajes: solo redactá un resumen y mejoras concretas.
             try:
                 response = generate_response(messages, **kwargs)
                 data = _parse_json_lenient(response)
+            except RateLimitError as exc:
+                # Sin cupo no tiene sentido gastar otro modo de llamada: el
+                # resumen determinista responde igual.
+                logger.warning("Narrative sin cupo disponible: %s", exc)
+                return None
             except Exception as exc:  # noqa: BLE001 - el fallback es determinista
                 logger.warning(
                     "Narrative with model %s failed (json=%s): %s",

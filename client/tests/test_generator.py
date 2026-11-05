@@ -101,7 +101,7 @@ def test_los_errores_del_proveedor_tambien_se_reintentan(monkeypatch):
         def create(self, **kwargs):
             self.calls.append(kwargs)
             if len(self.calls) == 1:
-                raise RuntimeError("429 rate limited")
+                raise RuntimeError("Error code: 503 - upstream exploded")
             return _FakeResponse("ok")
 
     client = _FakeClient([])
@@ -109,3 +109,23 @@ def test_los_errores_del_proveedor_tambien_se_reintentan(monkeypatch):
     monkeypatch.setattr(generator, "get_client", lambda: client)
 
     assert generator.generate_response([{"role": "user", "content": "hola"}]) == "ok"
+
+
+def test_el_rate_limit_no_se_reintenta_y_avisa_del_cupo(monkeypatch):
+    """Un 429 quema cupo si se repite: hay que cortar de una."""
+    class _RateLimited(_FakeCompletions):
+        def create(self, **kwargs):
+            self.calls.append(kwargs)
+            raise RuntimeError(
+                "Error code: 429 - {'error': {'message': "
+                "'Rate limit exceeded: free-models-per-day.'"
+            )
+
+    client = _FakeClient([])
+    client.completions = _RateLimited([])
+    monkeypatch.setattr(generator, "get_client", lambda: client)
+
+    with pytest.raises(generator.RateLimitError, match="cupo diario"):
+        generator.generate_response([{"role": "user", "content": "hola"}], max_retries=2)
+
+    assert len(client.completions.calls) == 1, "un 429 no debe reintentarse"
