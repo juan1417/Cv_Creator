@@ -148,6 +148,16 @@ export default function ChatPage() {
         setChatError("Necesitás completar tu CV primero. Ve a \"Editar CV\" para agregar tu información.");
       } else if (msg.includes("502") || msg.includes("Error del asistente")) {
         setChatError("El asistente está teniendo problemas. Intentá de nuevo en un momento.");
+      } else if (msg.includes("500") || msg.includes("Error interno")) {
+        setChatError("El servidor tuvo un error. Intentá de nuevo en unos segundos.");
+      } else if (
+        msg.includes("NetworkError") ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("fetch")
+      ) {
+        setChatError(
+          "No pude conectar con el servidor. Revisá que el backend esté corriendo e intentá de nuevo.",
+        );
       } else {
         setChatError(`Error: ${msg}`);
       }

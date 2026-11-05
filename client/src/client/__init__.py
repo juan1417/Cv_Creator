@@ -1,5 +1,9 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
 from .router.log_routes import router as log_router
 from .router.chat_routes import router as chat_router
 from .router.user_routes import router as user_router
@@ -31,6 +35,35 @@ app.add_middleware(
         "X-Export-Warnings",
     ],
 )
+
+logger = logging.getLogger("cv_creator.api")
+
+# Orígenes permitidos: tiene que coincidir con `allow_origins` de más abajo.
+ALLOWED_ORIGINS = ("http://localhost:3000",)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Los errores no controlados salen por fuera del middleware de CORS.
+
+    Sin las cabeceras el navegador no puede leer la respuesta y muestra un
+    error de red opaco (Firefox: "NetworkError when attempting to fetch
+    resource.") en vez del motivo real. El detalle se registra en el servidor.
+    """
+    logger.exception("Error no controlado en %s %s", request.method, request.url.path)
+    origin = request.headers.get("origin")
+    headers = {}
+    if origin in ALLOWED_ORIGINS:
+        headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+        }
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor. Probá de nuevo en unos segundos."},
+        headers=headers,
+    )
+
 
 @app.on_event("startup")
 def on_startup():

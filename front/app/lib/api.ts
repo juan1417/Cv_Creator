@@ -246,10 +246,13 @@ export async function sendMessage(
   sessionId: string,
   data: SendMessageRequest,
 ): Promise<SendMessageResponse> {
-  return request(`/api/chat/sessions/${sessionId}/messages`, {
-    method: "POST",
-    body: jsonBody(data),
-  });
+  // El asistente tarda 26-30 s con el modelo gratuito: el default de 60 s se
+  // queda corto cuando el modelo va lento.
+  return request(
+    `/api/chat/sessions/${sessionId}/messages`,
+    { method: "POST", body: jsonBody(data) },
+    180_000,
+  );
 }
 
 export async function listSessions(
