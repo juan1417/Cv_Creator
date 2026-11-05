@@ -78,22 +78,24 @@ def test_respuesta_en_blanco_tambien_se_reintenta(monkeypatch):
     assert len(client.completions.calls) == 2
 
 
-def test_presupuesto_se_limita_en_16000(monkeypatch):
-    client = _client([None, None, None, "al final"], monkeypatch)
+def test_las_respuestas_vacias_se_reintentan_una_sola_vez(monkeypatch):
+    """El cupo gratuito es de 50 pedidos/día: no se lo puede quemar reintentando."""
+    client = _client([None, None, None], monkeypatch)
 
-    generator.generate_response([{"role": "user", "content": "hola"}], max_retries=3)
+    with pytest.raises(ValueError, match="intentos"):
+        generator.generate_response([{"role": "user", "content": "hola"}], max_retries=3)
 
     budgets = [c["max_tokens"] for c in client.completions.calls]
-    assert budgets == [4000, 8000, 16000, 16000]
+    assert budgets == [4000, 8000], "un solo reintento con el doble de presupuesto"
 
 
 def test_agota_los_intentos_y_levanta_value_error(monkeypatch):
     client = _client([None, None, None], monkeypatch)
 
-    with pytest.raises(ValueError, match="3 intentos"):
+    with pytest.raises(ValueError, match="intentos"):
         generator.generate_response([{"role": "user", "content": "hola"}], max_retries=2)
 
-    assert len(client.completions.calls) == 3
+    assert len(client.completions.calls) == 2, "vacío: 2 pedidos, no 3"
 
 
 def test_los_errores_del_proveedor_tambien_se_reintentan(monkeypatch):
@@ -129,3 +131,23 @@ def test_el_rate_limit_no_se_reintenta_y_avisa_del_cupo(monkeypatch):
         generator.generate_response([{"role": "user", "content": "hola"}], max_retries=2)
 
     assert len(client.completions.calls) == 1, "un 429 no debe reintentarse"
+
+
+def test_modo_economico_no_gasta_pedidos(monkeypatch):
+    """Con MODO_ECONOMICO el análisis no hace NINGÚN pedido al modelo."""
+    from IA_rag import cv_analyzer
+
+    monkeypatch.setattr(cv_analyzer, "NARRATIVE_DISABLED", True)
+    pedidos = []
+    monkeypatch.setattr(
+        cv_analyzer, "generate_response",
+        lambda *a, **k: pedidos.append(1) or '{"summary": "x"}',
+    )
+    cv_data = {
+        "cv": {"name": "Ana", "about": "Perfil"},
+        "experience": [], "skills": [], "education": [],
+        "achievements": [], "programs": [], "languages": [],
+    }
+
+    assert cv_analyzer._llm_narrative(cv_data, [("Contenido", [])], "Python") is None
+    assert pedidos == []

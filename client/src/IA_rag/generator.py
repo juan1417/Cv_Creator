@@ -8,6 +8,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Una respuesta vacía suele ser presupuesto agotado por el razonamiento: se
+# reintenta una sola vez con el doble de tokens. Pasar de ahí solo quema cupo.
+MAX_EMPTY_RETRIES = 1
+
 RATE_LIMIT_MESSAGE = (
     "Se agotó el cupo diario de modelos gratuitos de OpenRouter. "
     "Esperá al reinicio diario o agregá créditos para subir el límite."
@@ -63,6 +67,7 @@ def generate_response(
 
     last_error = None
     budget = max_tokens
+    empty_tries = 0
     for attempt in range(max_retries + 1):
         kwargs["max_tokens"] = budget
         try:
@@ -71,6 +76,14 @@ def generate_response(
             if content and content.strip():
                 return content
             last_error = "Empty response from model"
+            empty_tries += 1
+            if empty_tries > MAX_EMPTY_RETRIES:
+                logger.warning(
+                    "Attempt %d: seguía vacío tras %d reintento(s); se corta "
+                    "para no gastar el cupo",
+                    attempt + 1, empty_tries - 1,
+                )
+                break
             budget = min(budget * 2, 16000)
             logger.warning(
                 "Attempt %d: empty response with max_tokens=%d, retrying with %d",

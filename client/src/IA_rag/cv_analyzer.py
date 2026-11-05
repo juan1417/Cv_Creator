@@ -30,6 +30,13 @@ logger = logging.getLogger(__name__)
 # Modelo específico para el resumen. Si no está definido, usa MODELO.
 ANALYSIS_MODEL = os.getenv("MODELO_ANALISIS") or os.getenv("MODELO")
 
+# El cupo gratuito es de 50 pedidos por día. Las cuatro métricas ya son
+# deterministas, así que con MODO_ECONOMICO=1 el análisis sigue funcionando y
+# no quema un pedido por cada vez que se abre la pantalla.
+NARRATIVE_DISABLED = os.getenv("MODO_ECONOMICO", "").strip().lower() in {
+    "1", "true", "si", "sí",
+}
+
 
 def _analysis_model_chain() -> list[str]:
     """Cadena de modelos de respaldo (NVIDIA a través de OpenRouter)."""
@@ -167,6 +174,9 @@ def _llm_narrative(
     job_description: str | None,
 ) -> tuple[str, list[str]] | None:
     """Pide al LLM un resumen y mejoras; no toca los puntajes."""
+    if NARRATIVE_DISABLED:
+        return None
+
     cv_text = cv_plain_text(cv_data)
     if not cv_text.strip():
         return None
